@@ -99,6 +99,7 @@ details[open]>summary .chev{transform:rotate(225deg)}
 .x{font:inherit;border:0;background:transparent;color:var(--muted);cursor:pointer;font-size:13px;padding:2px 4px}
 .x:hover{color:var(--ink)}
 .legend{font-size:12.5px;color:var(--muted);margin:0}
+.rule-note{grid-column:1/-1;font-size:12.5px;color:var(--muted)}
 
 /* 결과 */
 pre.out{margin:0;white-space:pre-wrap;word-break:break-word;font-family:var(--sans);font-size:13.5px;line-height:1.6;background:var(--bg);border:1px solid var(--line);border-radius:10px;padding:14px;max-height:420px;overflow:auto}
@@ -166,7 +167,7 @@ pre.out{margin:0;white-space:pre-wrap;word-break:break-word;font-family:var(--sa
       <h2 id="h-picked">고른 요소</h2>
       <span class="count-pill" id="count-pill">0개</span>
     </div>
-    <p class="legend">강도 1은 스치듯, 3은 분명히 보이게, 5는 모든 장면을 지배하게. 메모칸에 이름이나 구체적인 설정을 적으면 더 정확해져요. 5~15개가 가장 잘 먹혀요.</p>
+    <p class="legend">강도는 얼마나 자주 나오느냐가 아니라 사건과 선택에 얼마나 영향을 주느냐예요. 4~5는 이번 글의 핵심으로, 2~3은 보조로, 1은 은근한 배경으로 들어가요. 핵심은 3~4개면 충분해요. 시점, 문체, 구성 같은 요소는 강도 없이 연출 규칙으로 들어가요.</p>
     <div class="picked" id="picked"></div>
     <div><button class="btn ghost" id="b-clear" type="button">모두 비우기</button></div>
   </section>
@@ -242,7 +243,7 @@ const DATA = [
  ["mood","분위기","읽을 때 어떤 기분이 드나",[
   ["감정 톤","밝고 경쾌함|따뜻함|잔잔함|설렘|쓸쓸함|우울함|비장함|긴장감|공포|불안|광기|몽환적|향수|희망|절망|분노|유머|블랙코미디|풍자|서정적|기괴함|숭고함"],
   ["속도감","빠른 전개|느린 전개|완급 조절|숨 막히는 속도"],
-  ["수위","잔혹 묘사|폭력 묘사|수위는 낮게|아이도 읽을 수 있게"]
+  ["수위","관능적 긴장|성적 관계 암시|폭력 묘사|잔혹 묘사|욕설|도덕적 타락|권력의 폭력성|심리적 어두움|수위는 낮게|아이도 읽을 수 있게"]
  ]],
  ["struct","구조","이야기를 어떻게 짜나",[
   ["플롯 구조","3막 구조|기승전결|영웅의 여정|에피소드식|비선형 구성|순환 구조|병렬 플롯|옴니버스|역순 구성"],
@@ -251,12 +252,16 @@ const DATA = [
  ]]
 ];
 
+// 강도는 등장 횟수가 아니라 사건과 선택에 미치는 영향력
 const LV = [null,
- ["스치듯","배경에 은은하게, 한두 번만"],
- ["약하게","가끔 드러나게"],
- ["보통","분명히 보이지만 중심은 아니게"],
- ["강하게","이번 글의 주요 요소로"],
- ["매우 강하게","모든 장면을 지배하게"]];
+ ["암시","상황이 맞을 때만 은근히 암시"],
+ ["기회 되면","자연스러운 기회가 있을 때만 반영"],
+ ["분명히","독자가 분명히 알아챌 만큼 등장하되 반복 강조는 하지 않음"],
+ ["주요","주요 장면이나 중요한 선택에 직접 영향을 줌"],
+ ["핵심 축","이번 글의 사건, 선택, 감정선을 결정하는 핵심 축"]];
+// 강도 대신 그대로 지킬 규칙으로 다루는 요소
+const RULE_CATS = new Set(["pov","style"]);
+const RULE_GROUPS = new Set(["플롯 구조","장면 구성"]);
 
 const STAGES = [
  [0,10,"발단","인물과 세계를 소개하고, 일상에 균열을 내는 사건으로 독자를 붙잡아. 설명을 몰아서 하지 말고 장면으로 보여줘."],
@@ -272,14 +277,14 @@ const STAGES = [
 const CATS = DATA.map(([id,name,sub,groups]) => ({
   id,name,sub,
   groups: groups.map(([g,s]) => ({name:g, items: s.split("|").map(t => {
-    const [n,d] = t.split("~"); return {id:id+":"+n, name:n, desc:d||"", cat:id};
+    const [n,d] = t.split("~"); return {id:id+":"+n, name:n, desc:d||"", cat:id, rule:RULE_CATS.has(id)||RULE_GROUPS.has(g)};
   })}))
 }));
 const ITEM = {};
 CATS.forEach(c => c.groups.forEach(g => g.items.forEach(it => ITEM[it.id] = it)));
 const CATNAME = Object.fromEntries(CATS.map(c => [c.id,c.name]));
 
-const KEY = "seosa-jorip-v1";
+const KEY = "seosa-jorip-v2";
 const EXAMPLE = {
   title:"회귀한 검사가 자신을 죽인 황태자에게 복수한다", pos:12, total:"120화", len:"웹소설 1화, 약 5,000자",
   summary:"", next:"", cont:false, custom:{},
@@ -304,7 +309,7 @@ const openCats = new Set();
 
 function addCustomItem(cid, n){
   const id = cid+":"+n;
-  if (!ITEM[id]) ITEM[id] = {id,name:n,desc:"",cat:cid,custom:true};
+  if (!ITEM[id]) ITEM[id] = {id,name:n,desc:"",cat:cid,custom:true,rule:RULE_CATS.has(cid)};
   return id;
 }
 function save(){ try { localStorage.setItem(KEY, JSON.stringify(S)); } catch(e) {} }
@@ -348,7 +353,7 @@ function renderPicked(){
     return `<div class="pick" data-id="${esc(id)}">
       <div class="pick-name"><small>${CATNAME[it.cat]}</small>${esc(it.name)}</div>
       <button class="x" type="button" data-remove="${esc(id)}" aria-label="${esc(it.name)} 빼기">빼기</button>
-      <div class="pick-level"><input type="range" min="1" max="5" step="1" value="${v.lv}" data-lv="${esc(id)}" aria-label="${esc(it.name)} 강도"><output><b>${v.lv}</b> ${LV[v.lv][0]}</output></div>
+      ${it.rule ? `<div class="rule-note">연출 규칙이라 강도 없이 그대로 지켜요</div>` : `<div class="pick-level"><input type="range" min="1" max="5" step="1" value="${v.lv}" data-lv="${esc(id)}" aria-label="${esc(it.name)} 강도"><output><b>${v.lv}</b> ${LV[v.lv][0]}</output></div>`}
       <input type="text" value="${esc(v.note||"")}" data-note="${esc(id)}" placeholder="메모 (선택): 이름, 구체적인 설정 등" aria-label="${esc(it.name)} 메모">
     </div>`;
   }).join("") : `<p class="empty">아직 고른 요소가 없어요. 위에서 골라주세요.</p>`;
@@ -380,26 +385,39 @@ function buildPrompt(){
   L.push(st[3], "");
   if (S.summary.trim()) L.push("[지금까지 줄거리]", S.summary.trim(), "");
   if (S.next.trim()) L.push("[이번 글에서 꼭 일어날 일]", S.next.trim(), "");
-  if (ids.length){
-    L.push("[반영할 요소]", "강도는 1~5야. 1은 스치듯, 2는 가끔, 3은 분명히 보이게, 4는 주요 요소로, 5는 모든 장면을 지배하게.");
-    CATS.forEach(c => {
-      const mine = ids.filter(id => ITEM[id].cat === c.id);
-      if (!mine.length) return;
-      L.push("", "■ " + c.name);
-      mine.forEach(id => {
-        const it = ITEM[id], v = S.sel[id];
-        let line = `- ${it.name}${it.desc ? " ("+it.desc+")" : ""}: 강도 ${v.lv}, ${LV[v.lv][1]}`;
-        if ((v.note||"").trim()) line += ` / 메모: ${v.note.trim()}`;
-        L.push(line);
-      });
-    });
+  const tagged = ids.filter(id => !ITEM[id].rule);
+  const rules = ids.filter(id => ITEM[id].rule);
+  const line = id => {
+    const it = ITEM[id], v = S.sel[id];
+    let t = `- ${it.name} (${CATNAME[it.cat]}${it.desc ? ", "+it.desc : ""})`;
+    if (!it.rule) t += `: 강도 ${v.lv}`;
+    if ((v.note||"").trim()) t += ` / 메모: ${v.note.trim()}`;
+    return t;
+  };
+  const tiers = [
+    ["[이번 글의 핵심]", "사건, 선택, 감정선을 이끄는 축이야.", l => l >= 4],
+    ["[보조 요소]", "장면에 자연스럽게 섞어줘.", l => l === 2 || l === 3],
+    ["[은근한 배경]", "상황이 맞을 때만 살짝 암시해줘.", l => l === 1]
+  ];
+  if (tagged.length){
+    L.push("[강도의 뜻]", "강도는 등장 횟수가 아니라 사건과 인물의 선택에 미치는 영향력이야.");
+    for (let i = 5; i >= 1; i--) L.push(`${i}: ${LV[i][1]}`);
     L.push("");
+    tiers.forEach(([h, d, f]) => {
+      const mine = tagged.filter(id => f(S.sel[id].lv)).sort((x,y) => S.sel[y].lv - S.sel[x].lv);
+      if (mine.length) L.push(h, d, ...mine.map(line), "");
+    });
   }
+  if (rules.length) L.push("[연출 규칙]", "아래는 강도와 상관없이 그대로 지켜줘.", ...rules.map(line), "");
   L.push("[쓰는 규칙]");
   L.push(`- 분량: ${S.len}`);
   L.push("- 소설 본문만 써줘. 앞뒤 설명, 요약, 선택지 제안은 쓰지 마.");
   L.push("- 요소 이름을 본문에 그대로 쓰지 말고 장면, 대사, 행동으로 보여줘.");
-  if (ids.length) L.push("- 강도가 높은 요소일수록 더 자주, 더 뚜렷하게 드러내고, 낮은 요소는 은근히 녹여줘.");
+  if (tagged.length){
+    L.push("- 요소를 체크리스트처럼 하나씩 등장시키지 마. 장면의 개연성과 몰입이 먼저야.");
+    L.push("- 높은 강도는 언급 횟수가 아니라 사건과 선택에 미치는 영향으로 표현해줘. 같은 특성을 반복해서 설명하거나 증명하지 마.");
+    L.push("- 한 장면에 요소가 너무 많이 겹치면 핵심 요소만 남기고 나머지는 다른 장면으로 미루거나 빼도 돼.");
+  }
   L.push("- 이야기를 이번 글 안에서 끝내지 말고, 지금 단계에 맞는 지점에서 멈춰줘.");
   return L.join("\n");
 }
@@ -407,7 +425,9 @@ function buildPrompt(){
 function renderOut(){
   $("#out").textContent = buildPrompt();
   const n = Object.keys(S.sel).length;
-  $("#dock-info").innerHTML = `<b>${n}개</b> 선택 · ${stageOf(+S.pos)[2]} ${S.pos}%<br>${n>15?"15개가 넘으면 일부가 무시될 수 있어요":n<5?"5~15개를 추천해요":"딱 좋은 개수예요"}`;
+  const core = Object.entries(S.sel).filter(([id,v]) => ITEM[id] && !ITEM[id].rule && v.lv >= 4).length;
+  const tip = n>15 ? "15개가 넘으면 일부가 무시될 수 있어요" : core>4 ? `핵심(강도 4~5)이 ${core}개예요. 3~4개를 추천해요` : n<5 ? "5~15개를 추천해요" : "딱 좋은 구성이에요";
+  $("#dock-info").innerHTML = `<b>${n}개</b> 선택 · ${stageOf(+S.pos)[2]} ${S.pos}%<br>${tip}`;
 }
 
 function refresh(cats=true){ if (cats) renderCats(); renderPicked(); renderOut(); save(); }
