@@ -26,7 +26,7 @@
   --ok:#5FCB94; --warn:#F0A94B; --shadow:none;
 }
 *{box-sizing:border-box}
-body{background:var(--bg);color:var(--ink);font-family:var(--sans);font-size:15px;line-height:1.55;padding:0 16px 120px}
+body{background:var(--bg);color:var(--ink);font-family:var(--sans);font-size:15px;line-height:1.55;padding:0 16px 40px}
 .wrap{max-width:760px;margin:0 auto;display:flex;flex-direction:column;gap:20px}
 header.top{padding-block:28px 4px;display:flex;flex-direction:column;gap:6px}
 h1{font-family:var(--serif);font-weight:700;font-size:30px;letter-spacing:-.01em;margin:0;text-wrap:balance}
@@ -108,11 +108,10 @@ pre.out{margin:0;white-space:pre-wrap;word-break:break-word;font-family:var(--sa
 .check input{margin-top:4px;accent-color:var(--accent)}
 
 /* 하단 바 */
-.dock{position:fixed;left:0;right:0;bottom:0;z-index:10;background:var(--surface);border-top:1px solid var(--line);padding:10px 16px calc(10px + env(safe-area-inset-bottom,0px))}
-.dock-in{max-width:760px;margin:0 auto;display:flex;align-items:center;gap:10px}
-.dock-info{flex:1;min-width:0;font-size:13px;color:var(--muted);line-height:1.35}
-.dock-info b{color:var(--ink);font-variant-numeric:tabular-nums}
-.toast{position:fixed;left:50%;bottom:84px;transform:translateX(-50%);background:var(--ink);color:var(--bg);padding:8px 14px;border-radius:999px;font-size:13.5px;z-index:20;pointer-events:none}
+.tip{font-size:13px;color:var(--muted);margin:0}
+.tip b{color:var(--ink);font-variant-numeric:tabular-nums}
+.finder select{width:auto;flex:none;background:var(--surface);padding:10px 8px}
+.toast{position:fixed;left:50%;bottom:calc(24px + env(safe-area-inset-bottom,0px));transform:translateX(-50%);background:var(--ink);color:var(--bg);padding:8px 14px;border-radius:999px;font-size:13.5px;z-index:20;pointer-events:none}
 @media (prefers-reduced-motion:reduce){.chev{transition:none}}
 </style>
 </head><body>
@@ -159,6 +158,7 @@ pre.out{margin:0;white-space:pre-wrap;word-break:break-word;font-family:var(--sa
   <div>
     <div class="finder">
       <input type="text" id="f-search" placeholder="요소 검색 (예: 회귀, 비, 배신)" aria-label="요소 검색" autocomplete="off">
+      <select id="f-rn" aria-label="무작위로 고를 개수"></select>
       <button class="btn" id="b-random" type="button">무작위</button>
     </div>
     <div class="cats" id="cats"></div>
@@ -179,18 +179,12 @@ pre.out{margin:0;white-space:pre-wrap;word-break:break-word;font-family:var(--sa
       <h2 id="h-out">완성된 프롬프트</h2>
       <button class="btn primary" id="b-copy2" type="button">복사</button>
     </div>
+    <p class="tip" id="dock-info"></p>
     <label class="check" for="f-cont"><input type="checkbox" id="f-cont"> <span>같은 채팅에서 이어 쓰는 중이에요 (앞 대화를 이어받도록 문구를 바꿔요)</span></label>
     <pre class="out" id="out" tabindex="0"></pre>
   </section>
 </div>
 
-<div class="dock">
-  <div class="dock-in">
-    <div class="dock-info" id="dock-info"></div>
-    <button class="btn" id="b-view" type="button">보기</button>
-    <button class="btn primary" id="b-copy" type="button">프롬프트 복사</button>
-  </div>
-</div>
 <div class="toast" id="toast" hidden></div>
 
 <script>
@@ -429,7 +423,7 @@ function renderOut(){
   const n = Object.keys(S.sel).length;
   const core = Object.entries(S.sel).filter(([id,v]) => ITEM[id] && !ITEM[id].rule && v.lv >= 4).length;
   const tip = n>15 ? "15개가 넘으면 일부가 무시될 수 있어요" : core>4 ? `핵심(강도 4~5)이 ${core}개예요. 3~4개를 추천해요` : n<5 ? "5~15개를 추천해요" : "딱 좋은 구성이에요";
-  $("#dock-info").innerHTML = `<b>${n}개</b> 선택 · ${stageOf(+S.pos)[2]} ${S.pos}%<br>${tip}`;
+  $("#dock-info").innerHTML = `<b>${n}개</b> 선택 · ${stageOf(+S.pos)[2]} ${S.pos}%. ${tip}`;
 }
 
 function refresh(cats=true){ if (cats) renderCats(); renderPicked(); renderOut(); save(); }
@@ -478,16 +472,30 @@ $("#picked").addEventListener("input", e => {
   renderOut(); save();
 });
 $("#b-clear").addEventListener("click", () => { S.sel = {}; refresh(); toast("모두 비웠어요"); });
+const rnSel = $("#f-rn");
+rnSel.innerHTML = Array.from({length:18}, (_,i) => `<option value="${i+3}">${i+3}개</option>`).join("");
+rnSel.value = S.rn || 10;
+rnSel.addEventListener("change", () => { S.rn = +rnSel.value; save(); });
 $("#b-random").addEventListener("click", () => {
-  const pick = arr => arr[Math.floor(Math.random()*arr.length)];
+  const N = +rnSel.value;
+  const shuffle = a => { for (let i=a.length-1;i>0;i--){ const j=Math.floor(Math.random()*(i+1)); [a[i],a[j]]=[a[j],a[i]]; } return a; };
+  const pools = Object.fromEntries(CATS.map(c => [c.id, shuffle(c.groups.flatMap(g => g.items))]));
+  // 장르를 먼저, 나머지 분류를 돌아가며 하나씩 뽑아 고르게 섞기
+  const order = ["genre", ...shuffle(CATS.map(c => c.id).filter(id => id !== "genre"))];
   S.sel = {};
-  const plan = {genre:2,char:2,rel:1,conf:1,event:1,world:2,pov:1,style:1,mood:1,struct:1};
-  CATS.forEach(c => { const all = c.groups.flatMap(g => g.items); for (let i=0;i<plan[c.id];i++){ const it = pick(all); S.sel[it.id] = {lv:1+Math.floor(Math.random()*5), note:""}; } });
+  let core = 0, rules = 0, k = 0;
+  while (Object.keys(S.sel).length < N && k < 2000){
+    const it = pools[order[k++ % order.length]].pop();
+    if (!it || S.sel[it.id]) continue;
+    if (it.rule){ if (rules >= 2) continue; rules++; S.sel[it.id] = {lv:3,note:""}; continue; }
+    let lv = 1 + Math.floor(Math.random()*5);
+    if (lv >= 4 && core >= 3) lv = 1 + Math.floor(Math.random()*3);
+    if (lv >= 4) core++;
+    S.sel[it.id] = {lv, note:""};
+  }
   refresh(); toast(`${Object.keys(S.sel).length}개를 무작위로 골랐어요`);
 });
-$("#b-copy").addEventListener("click", copy);
 $("#b-copy2").addEventListener("click", copy);
-$("#b-view").addEventListener("click", () => $("#out-panel").scrollIntoView({behavior:"smooth"}));
 
 renderPos(); refresh();
 </script>
