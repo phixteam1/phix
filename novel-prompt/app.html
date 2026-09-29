@@ -119,6 +119,7 @@ pre.out{margin:0;white-space:pre-wrap;word-break:break-word;font-family:var(--sa
     <span class="eyebrow">소설 프롬프트 생성기</span>
     <h1>서사 조립대</h1>
     <p class="lede">요소를 고르고 강도와 위치를 정하면, 챗지피티에 붙여넣을 프롬프트가 만들어져요. 처음엔 예시로 몇 개 골라뒀어요.</p>
+    <div><button class="btn" id="b-preset" type="button">추천 1화 세팅 불러오기</button></div>
   </header>
 
   <section class="panel" aria-labelledby="h-work">
@@ -299,6 +300,29 @@ CATS.forEach(c => c.groups.forEach(g => g.items.forEach(it => ITEM[it.id] = it))
 const CATNAME = Object.fromEntries(CATS.map(c => [c.id,c.name]));
 
 const KEY = "seosa-jorip-v2";
+// 1화가 잘 뽑히도록 짠 추천 세팅: 장소 하나, 중심 사건 하나, 마지막에 회귀로 끊기
+const PRESET = {
+  title:"편의점 야간 알바생이 매일 밤 같은 손님에게 살해당하고, 같은 월요일 저녁으로 돌아온다",
+  pos:0, total:"120화", len:"웹소설 1화, 약 5,000자", summary:"",
+  next:"평범하고 지루한 야간 근무를 보여줘. 자정 직전 처음 보는 손님이 들어와 주인공의 이름을 부르고, 주인공은 그 손님에게 죽는다. 마지막 문장에서 주인공이 같은 월요일 저녁, 출근 직전에 다시 눈을 뜬다. 루프의 규칙이나 손님의 정체는 설명하지 마.",
+  cont:false,
+  sel:{
+    "genre:타임루프":{lv:5,note:"1화에서는 마지막 문장에서 처음 되돌아감"},
+    "genre:미스터리":{lv:4,note:""},
+    "event:낯선 방문자":{lv:4,note:"검은 우산을 든 손님, 주인공 이름을 앎"},
+    "char:평범한 소시민":{lv:3,note:"20대 후반 편의점 야간 알바생 윤재"},
+    "char:유머러스":{lv:3,note:"속으로 투덜대는 자조적인 유머"},
+    "world:편의점":{lv:3,note:"새벽 손님 없는 동네 편의점"},
+    "mood:긴장감":{lv:3,note:"일상 속에서 조금씩 어긋나는 느낌"},
+    "conf:시간 제한":{lv:2,note:"자정 직전"},
+    "struct:체호프의 총":{lv:2,note:"계산대 밑 고장 난 CCTV 모니터"},
+    "event:흑막의 등장":{lv:0,note:"손님은 흑막이 아님. 진짜 흑막은 한참 뒤에"},
+    "pov:1인칭 주인공":{lv:3,note:""},
+    "style:담담한 문장":{lv:3,note:""},
+    "struct:강렬한 첫 문장":{lv:3,note:""},
+    "style:절단신공":{lv:3,note:""}
+  }
+};
 const EXAMPLE = {
   title:"회귀한 검사가 자신을 죽인 황태자에게 복수한다", pos:0, total:"120화", len:"웹소설 1화, 약 5,000자",
   summary:"", next:"", cont:false, custom:{},
@@ -504,6 +528,13 @@ $("#picked").addEventListener("input", e => {
   if (t.dataset.lv){ const v = +t.value; S.sel[t.dataset.lv].lv = v; t.nextElementSibling.innerHTML = `<b>${v}</b> ${LV[v][0]}`; }
   if (t.dataset.note !== undefined) S.sel[t.dataset.note].note = t.value;
   renderOut(); save();
+});
+$("#b-preset").addEventListener("click", () => {
+  const custom = S.custom, rn = S.rn;
+  S = Object.assign(structuredClone(PRESET), {custom, rn});
+  [["#f-title","title"],["#f-total","total"],["#f-len","len"],["#f-summary","summary"],["#f-next","next"]].forEach(([q,k]) => $(q).value = S[k]);
+  $("#f-cont").checked = S.cont;
+  renderPos(); refresh(); toast("추천 세팅을 불러왔어요");
 });
 $("#b-clear").addEventListener("click", () => { S.sel = {}; refresh(); toast("모두 비웠어요"); });
 const rnSel = $("#f-rn");
