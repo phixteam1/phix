@@ -1,0 +1,506 @@
+<!doctype html><html lang="ko"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><style>body{margin:0}[hidden]{display:none!important}</style><title>시뮬레이션 가설 영상</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Do+Hyeon&family=Gowun+Dodum&display=swap">
+<style>
+:root{--bg:#0B1430;--panel:#15224A;--ink:#F5F7FF;--muted:#A9B3D6;--accent:#FFD23F;color-scheme:dark}
+*{box-sizing:border-box}
+body{background:var(--bg);color:var(--ink);font-family:"Gowun Dodum","Apple SD Gothic Neo",sans-serif;padding:16px 16px 32px}
+.wrap{max-width:960px;margin:0 auto;display:flex;flex-direction:column;gap:12px}
+h1{font-family:"Do Hyeon",sans-serif;font-weight:400;font-size:24px;margin:4px 0 0}
+p.sub{margin:0;color:var(--muted);font-size:14px}
+canvas{width:100%;height:auto;aspect-ratio:16/9;border-radius:10px;display:block;background:#0F1B3D}
+.bar{display:flex;gap:10px;align-items:center}
+button{font:inherit;font-size:15px;background:var(--panel);color:var(--ink);border:1px solid #2A3A70;border-radius:8px;padding:8px 14px;cursor:pointer}
+button:focus-visible,input:focus-visible{outline:2px solid var(--accent);outline-offset:2px}
+input[type=range]{flex:1;accent-color:var(--accent);min-width:0}
+.time{font-variant-numeric:tabular-nums;color:var(--muted);font-size:13px;white-space:nowrap}
+</style></head><body>
+
+<div class="wrap">
+  <h1>우리가 시뮬레이션 속에 산다면, 들킬 수 있을까?</h1>
+  <p class="sub">장면별 대본(JSON)을 코드로 그린 애니메이션이에요. 소리는 없고 내레이션은 자막으로 나와요.</p>
+  <canvas id="c" width="1280" height="720"></canvas>
+  <div class="bar">
+    <button id="play" type="button">재생</button>
+    <input type="range" id="seek" min="0" max="1000" value="0" aria-label="재생 위치">
+    <span class="time" id="time">0:00 / 0:00</span>
+  </div>
+</div>
+
+<script id="script" type="application/json">{"title": "우리가 시뮬레이션 속에 산다면, 들킬 수 있을까?", "palette": ["#0F1B3D", "#1E2F66", "#2EC4B6", "#FFD23F", "#FF6B6B", "#7B61FF", "#F5F7FF"], "characters": [{"id": "nemo", "look": "모서리가 둥근 정사각형 몸통(#2EC4B6), 흰 원 두 개 눈(#F5F7FF)에 작은 검은 점 눈동자(#0F1B3D). 몸통 높이는 화면 높이의 12%. 우리 우주의 주민을 대표하는 주인공"}, {"id": "agent", "look": "작은 정육면체를 정면에서 본 사각형(#7B61FF), 가운데 흰 점 하나가 눈. nemo의 절반 크기. 컴퓨터 속 인공지능 캐릭터"}, {"id": "simulator", "look": "화면 밖에 있는 존재. 얼굴은 보이지 않고, 화면 가장자리에서 들어오는 거대한 노란 원형 커서(#FFD23F)와 가느다란 선으로만 표현"}], "scenes": [{"id": 1, "duration_sec": 7, "narration": "지금 이 순간이 진짜라는 걸, 증명할 수 있나요?", "on_screen_text": "", "visual": "짙은 남색 배경(#0F1B3D). 화면 가운데에 nemo가 서 있고, 발밑에 가는 흰 수평선(#F5F7FF)이 땅을 표시", "animation": "nemo가 0초에 등장해 1초간 살짝 튀어 오름. 5초에 nemo가 눈을 깜빡이며 화면 쪽을 봄", "transition": "컷"}, {"id": 2, "duration_sec": 8, "narration": "어쩌면 우리 우주 전체가, 누군가의 컴퓨터에서 돌아가는 프로그램일지도 모릅니다.", "on_screen_text": "", "visual": "같은 장면. nemo 주변 배경 전체", "animation": "0초부터 카메라가 천천히 줌 아웃. 4초에 배경 가장자리에 얇은 사각 테두리(#2EC4B6)가 나타나며, 지금까지의 장면이 모니터 화면 안이었다는 게 드러남. 7초에 모니터 아래에 작은 받침대가 그려짐", "transition": "줌 아웃이 계속되며 다음 장면으로"}, {"id": 3, "duration_sec": 7, "narration": "이상한 말처럼 들리지만, 진지하게 이걸 따지는 철학자와 물리학자들이 있습니다.", "on_screen_text": "시뮬레이션 가설", "visual": "모니터가 화면 가운데에 작게 떠 있고, 위쪽 가운데에 제목 텍스트(#FFD23F)", "animation": "1초에 제목 텍스트가 아래에서 위로 떠오르며 나타남. 5초에 모니터 화면 속 nemo가 작게 손을 흔듦", "transition": "페이드"}, {"id": 4, "duration_sec": 9, "narration": "출발점은 2003년, 철학자 닉 보스트롬의 논문입니다. 그는 세 가지 가능성 중 하나는 반드시 참이라고 주장했습니다.", "on_screen_text": "닉 보스트롬, 2003", "visual": "화면을 세로로 3등분하는 둥근 카드 세 장(#1E2F66), 테두리 #F5F7FF. 아직 내용은 비어 있음", "animation": "카드가 왼쪽부터 0.5초 간격으로 아래에서 올라옴", "transition": "컷"}, {"id": 5, "duration_sec": 9, "narration": "첫째, 거의 모든 문명은 우주를 흉내 낼 만큼 발전하기 전에 사라진다.", "on_screen_text": "1. 그 전에 멸망한다", "visual": "왼쪽 카드 안에 작은 행성(원, #2EC4B6)과 그 위의 작은 건물들(사각형, #F5F7FF)", "animation": "2초부터 건물들이 하나씩 아래로 가라앉아 사라지고, 6초에 행성 색이 회색(#5A6275)으로 바뀜. 나머지 두 카드는 어둡게 유지", "transition": "컷"}, {"id": 6, "duration_sec": 9, "narration": "둘째, 발전한 문명은 있지만, 아무도 그런 시뮬레이션을 돌리고 싶어 하지 않는다.", "on_screen_text": "2. 할 수 있지만 안 한다", "visual": "가운데 카드 안에 커다란 컴퓨터(사각형, #7B61FF)와 그 앞에서 고개를 젓는 원형 머리(#FFD23F)", "animation": "2초부터 원형 머리가 좌우로 세 번 흔들림. 컴퓨터 화면은 꺼진 상태(#0F1B3D) 유지", "transition": "컷"}, {"id": 7, "duration_sec": 10, "narration": "셋째, 그렇다면 남는 결론. 우리는 거의 확실히 시뮬레이션 속에 있다.", "on_screen_text": "3. 우리는 시뮬레이션 속에 있다", "visual": "오른쪽 카드 안에 작은 모니터 여러 개가 격자로 배열되고, 각 화면 안에 아주 작은 nemo가 있음", "animation": "2초부터 모니터가 1개, 4개, 16개로 복제되며 카드를 채움. 7초에 오른쪽 카드만 밝아지고 나머지 두 카드는 더 어두워짐", "transition": "오른쪽 카드로 줌 인"}, {"id": 8, "duration_sec": 10, "narration": "왜냐하면, 시뮬레이션을 돌리는 문명이 하나라도 있다면, 가짜 세상은 진짜보다 훨씬 많을 테니까요.", "on_screen_text": "진짜는 하나, 가짜는 셀 수 없이", "visual": "화면 왼쪽에 큰 행성 하나(#2EC4B6, 화면 높이의 25%), 오른쪽에 작은 점 수백 개(#7B61FF)가 화면을 채움", "animation": "2초부터 오른쪽 점들이 폭발하듯 퍼져 나가며 개수가 늘어남. 7초에 가운데 비율 텍스트 등장", "transition": "페이드"}, {"id": 9, "duration_sec": 8, "narration": "무작위로 한 세상을 골랐을 때, 그게 진짜일 확률은 아주 낮아지죠.", "on_screen_text": "", "visual": "같은 점들 위로 노란 화살표(#FFD23F) 하나가 떠 있음", "animation": "0초부터 화살표가 점들 위를 빠르게 훑다가 5초에 보라색 점 하나 위에 멈춤. 그 점이 확대되며 안에 nemo가 보임", "transition": "점 안으로 줌 인"}, {"id": 10, "duration_sec": 8, "narration": "하지만 이건 증명이 아니라 논리 게임입니다. 전제 하나하나가 큰 가정이에요.", "on_screen_text": "가정 1. 의식을 계산할 수 있다", "visual": "nemo가 화면 왼쪽에 서 있고, 오른쪽 위에 말풍선 모양 사각형(#1E2F66) 안에 물음표(#FFD23F)", "animation": "2초에 물음표가 한 번 흔들림. 4초에 화면 글자가 아래쪽에 나타남", "transition": "컷"}, {"id": 11, "duration_sec": 10, "narration": "가장 큰 가정은 이겁니다. 뇌의 활동을 계산으로 흉내 내면, 거기서도 진짜 경험이 생길까?", "on_screen_text": "", "visual": "가운데에 뇌 모양 대신 단순한 원(#FF6B6B)과 그 안에 연결된 작은 점과 선(신경망), 오른쪽에 같은 모양이 사각 격자(#7B61FF)로 그려진 버전", "animation": "2초부터 왼쪽 원 안의 점들이 깜빡이고, 5초부터 같은 깜빡임 패턴이 오른쪽 격자 버전에 복사됨", "transition": "컷"}, {"id": 12, "duration_sec": 10, "narration": "뇌 하나를 흉내 내는 데 필요한 계산량은, 연구자마다 추정치가 수천 배 넘게 갈립니다. 아무도 정확히 모른다는 뜻이죠.", "on_screen_text": "필요한 계산량: 추정치가 수천 배 차이", "visual": "가로로 긴 로그 눈금 막대(#F5F7FF 선)가 화면 가운데를 가로지르고, 그 위에 넓게 퍼진 반투명 띠(#FF6B6B, 불투명도 40%)", "animation": "1초부터 띠가 왼쪽에서 오른쪽으로 길게 늘어나며 퍼짐. 6초에 띠 위에 물음표 세 개가 떠오름", "transition": "페이드"}, {"id": 13, "duration_sec": 9, "narration": "그런데 요즘, 이 질문이 조금 덜 황당하게 들리기 시작했습니다. 인공지능 때문이에요.", "on_screen_text": "", "visual": "어두운 배경에 모니터 하나(#1E2F66 화면, #2EC4B6 테두리)가 가운데", "animation": "3초에 모니터 화면이 켜지며 agent 캐릭터 하나가 튀어나옴. 6초에 agent가 두리번거림", "transition": "모니터 화면으로 줌 인"}, {"id": 14, "duration_sec": 11, "narration": "2023년 한 연구에서는 인공지능 캐릭터 25명을 작은 가상 마을에 풀어놓았습니다. 그들은 스스로 대화하고, 약속을 잡고, 파티를 열었어요.", "on_screen_text": "AI 주민 25명의 가상 마을 (2023)", "visual": "위에서 내려다본 작은 마을. 초록 사각형 땅(#2EC4B6, 불투명도 50%), 작은 집 사각형들(#F5F7FF), 그 사이에 agent 여러 명", "animation": "0초부터 agent들이 집 사이를 천천히 돌아다님. 6초에 agent 두 명 위에 작은 말풍선이 번갈아 뜸. 9초에 agent들이 한 집 앞으로 모이고 그 위에 노란 별(#FFD23F)이 반짝임", "transition": "컷"}, {"id": 15, "duration_sec": 9, "narration": "물론 이 캐릭터들에게 의식이 있다는 증거는 없습니다. 하지만 이 장면은 이상한 질문을 던지죠.", "on_screen_text": "", "visual": "마을을 위에서 내려다보는 노란 원형 커서(simulator, #FFD23F)가 화면 위쪽 가장자리에서 들어와 있음", "animation": "2초에 커서가 천천히 마을 위로 내려옴. 6초에 agent 한 명이 위를 올려다봄", "transition": "컷"}, {"id": 16, "duration_sec": 7, "narration": "저 안의 캐릭터가 자기가 가짜라는 걸 알아챌 수 있을까요? 그리고 우리는요?", "on_screen_text": "", "visual": "화면을 좌우로 분할. 왼쪽에 위를 올려다보는 agent, 오른쪽에 같은 자세로 위를 올려다보는 nemo", "animation": "0초에 분할 화면이 열림. 4초에 두 캐릭터가 동시에 눈을 깜빡임", "transition": "오른쪽 화면으로 밀어 넘기기"}, {"id": 17, "duration_sec": 10, "narration": "게임을 만드는 사람들은 비용을 아낍니다. 세상을 무한히 매끄럽게 만들지 않고, 작은 칸으로 나누죠.", "on_screen_text": "", "visual": "매끄러운 원(#2EC4B6)이 화면 가운데에 크게 있음", "animation": "2초부터 줌 인이 시작되고, 6초쯤 원의 가장자리가 계단 모양 픽셀로 보이기 시작함", "transition": "줌 인이 계속됨"}, {"id": 18, "duration_sec": 11, "narration": "2012년 물리학자들은 이런 제안을 했습니다. 우리 우주도 격자 위에서 계산된다면, 그 흔적이 우주선에 남을 수 있다고요.", "on_screen_text": "격자의 흔적을 찾자 (2012)", "visual": "배경 전체에 옅은 격자선(#7B61FF, 불투명도 25%). 왼쪽 위에서 오른쪽 아래로 날아가는 밝은 점(#FFD23F, 우주에서 오는 고에너지 입자)", "animation": "2초부터 점들이 여러 방향에서 날아옴. 7초부터 격자선과 나란한 방향으로 날아오는 점만 조금 더 밝게 빛남", "transition": "컷"}, {"id": 19, "duration_sec": 9, "narration": "격자가 있다면, 가장 에너지가 높은 입자들이 특정 방향으로 조금 치우쳐 도착할 수 있다는 거죠.", "on_screen_text": "", "visual": "가운데 지구 원(#2EC4B6)과 그 주위로 도착하는 화살표들(#FFD23F)", "animation": "1초부터 화살표가 사방에서 들어오고, 5초에 몇몇 방향의 화살표만 더 굵어짐", "transition": "페이드"}, {"id": 20, "duration_sec": 9, "narration": "지금까지 그런 흔적은 발견되지 않았습니다. 물론, 흔적이 없다고 시뮬레이션이 아니라는 뜻도 아니에요.", "on_screen_text": "아직 발견 안 됨", "visual": "같은 지구 주위로 화살표가 고르게 퍼져 있음", "animation": "2초에 굵었던 화살표들이 다른 것과 같은 굵기로 돌아감. 5초에 화면 글자가 도장 찍히듯 나타남", "transition": "컷"}, {"id": 21, "duration_sec": 11, "narration": "여기엔 또 하나의 반전이 있습니다. 우리 우주는 양자역학을 따르는데, 양자 세계를 보통 컴퓨터로 흉내 내는 건 입자가 늘수록 엄청나게 어려워집니다.", "on_screen_text": "", "visual": "왼쪽에 작은 원 2개, 가운데 원 10개, 오른쪽 원 50개(#2EC4B6). 각 묶음 아래에 계산량을 나타내는 세로 막대(#FF6B6B)", "animation": "1초부터 왼쪽부터 순서대로 막대가 자라남. 오른쪽 막대는 화면 위를 뚫고 끝없이 올라가 보이지 않게 됨", "transition": "컷"}, {"id": 22, "duration_sec": 9, "narration": "물리학자 리처드 파인만이 1981년에 지적한 문제예요. 그래서 양자 컴퓨터라는 아이디어가 나왔죠.", "on_screen_text": "파인만, 1981", "visual": "화면 가운데에 둥근 사각형 칩(#7B61FF) 하나, 그 위에서 반짝이는 작은 원들", "animation": "2초에 칩이 나타나고, 5초부터 칩 위의 원들이 동시에 켜졌다 꺼졌다 반복", "transition": "페이드"}, {"id": 23, "duration_sec": 10, "narration": "만약 우리를 돌리는 컴퓨터가 있다면, 그건 우리가 아는 어떤 컴퓨터와도 전혀 다른 물리 법칙 위에 있을지도 모릅니다.", "on_screen_text": "", "visual": "화면 가운데 모니터 속 nemo의 우주. 모니터 바깥 배경이 낯선 색(#FF6B6B와 #7B61FF가 섞인 그라데이션)으로 바뀌어 있음", "animation": "0초부터 모니터 바깥 배경의 그라데이션이 천천히 소용돌이치듯 회전. 6초에 simulator 커서가 화면 가장자리에서 살짝 보였다 사라짐", "transition": "컷"}, {"id": 24, "duration_sec": 10, "narration": "그렇다면 이건 과학일까요? 실험으로 틀렸음을 보일 방법이 없다면, 많은 과학자들은 과학이 아니라고 말합니다.", "on_screen_text": "반증할 수 있는가?", "visual": "저울 하나(가는 선과 두 개의 접시). 왼쪽 접시에 '가설' 텍스트, 오른쪽 접시는 비어 있음", "animation": "2초부터 저울이 기울지 못하고 가운데에서 계속 흔들림", "transition": "페이드"}, {"id": 25, "duration_sec": 10, "narration": "하지만 이 질문은 좋은 질문들을 끌고 옵니다. 의식이란 무엇인지, 계산의 한계는 어디인지, 우주에 가장 작은 단위가 있는지.", "on_screen_text": "", "visual": "화면 가운데 물음표(#FFD23F)에서 세 갈래 선이 뻗어 나가 각각 작은 아이콘(원 속 점들, 칩, 격자)에 연결됨", "animation": "1초, 4초, 7초에 한 갈래씩 선이 자라며 아이콘이 나타남", "transition": "컷"}, {"id": 26, "duration_sec": 9, "narration": "그리고 설령 우리가 누군가의 프로그램이라 해도, 오늘 느낀 기쁨과 슬픔이 덜 진짜가 되지는 않습니다.", "on_screen_text": "", "visual": "1장면과 같은 배경. nemo 옆에 agent가 나란히 서 있음", "animation": "2초에 두 캐릭터 위로 작은 노란 하트(#FFD23F)가 떠오름. 6초에 둘이 서로를 바라봄", "transition": "컷"}, {"id": 27, "duration_sec": 8, "narration": "그러니 지금은, 이 세상을 한 번 더 자세히 들여다보면 어떨까요.", "on_screen_text": "", "visual": "nemo가 화면 가운데에 있고, 발밑에 흰 수평선", "animation": "0초부터 카메라가 천천히 줌 아웃하며 모니터 테두리가 다시 나타남. 5초에 모니터 바깥에서 아주 작은 노란 커서가 한 번 깜빡임", "transition": "암전"}]}</script>
+<script>
+const DOC = JSON.parse(document.getElementById("script").textContent);
+const cv = document.getElementById("c"), ctx = cv.getContext("2d");
+const W = 1280, H = 720;
+const C = {navy:"#0F1B3D", navy2:"#1E2F66", teal:"#2EC4B6", yellow:"#FFD23F", coral:"#FF6B6B", purple:"#7B61FF", white:"#F5F7FF", gray:"#5A6275", green:"#2EC4B6"};
+const TITLE = '"Do Hyeon", "WenQuanYi Zen Hei", sans-serif';
+const BODY = '"Gowun Dodum", "WenQuanYi Zen Hei", sans-serif';
+
+// ---------- 기본 도구 ----------
+const clamp = (v,a=0,b=1) => Math.max(a, Math.min(b, v));
+const smooth = x => { x = clamp(x); return x*x*(3-2*x); };
+const P = (s,a,b) => smooth((s-a)/(b-a));              // a~b초 사이 0→1
+const lerp = (a,b,t) => a + (b-a)*t;
+function rng(seed){ return () => { seed |= 0; seed = seed + 0x6D2B79F5 | 0; let t = Math.imul(seed ^ seed >>> 15, 1 | seed); t = t + Math.imul(t ^ t >>> 7, 61 | t) ^ t; return ((t ^ t >>> 14) >>> 0) / 4294967296; }; }
+function bg(col=C.navy){ ctx.fillStyle = col; ctx.fillRect(0,0,W,H); }
+function rr(x,y,w,h,r){ ctx.beginPath(); ctx.roundRect(x,y,w,h,r); }
+function circle(x,y,r,fill){ ctx.beginPath(); ctx.arc(x,y,r,0,Math.PI*2); ctx.fillStyle = fill; ctx.fill(); }
+function text(str,x,y,size,col=C.white,align="center",font=BODY,alpha=1){
+  ctx.save(); ctx.globalAlpha *= alpha; ctx.fillStyle = col; ctx.font = `${size}px ${font}`; ctx.textAlign = align; ctx.textBaseline = "middle"; ctx.fillText(str,x,y); ctx.restore();
+}
+function topText(str, s, at=0.8){
+  if (!str) return;
+  const a = P(s, at, at+0.5);
+  text(str, W/2, 78 + (1-a)*16, 42, C.yellow, "center", TITLE, a);
+}
+function blinkAt(s, times){ return times.some(t => s >= t && s < t + 0.18); }
+
+// 주인공: 청록 둥근 사각형
+function nemo(x, yBottom, h, o={}){
+  const w = h, y = yBottom - h;
+  ctx.save();
+  ctx.translate(x, yBottom); ctx.rotate(o.rot||0); ctx.scale(o.scale??1, o.scale??1); ctx.translate(-x, -yBottom);
+  ctx.globalAlpha *= o.alpha ?? 1;
+  rr(x - w/2, y, w, h, h*0.28); ctx.fillStyle = o.color || C.teal; ctx.fill();
+  const ex = h*0.2, ey = y + h*0.38, er = h*0.14;
+  const lx = (o.lookX||0)*er*0.45, ly = (o.lookY||0)*er*0.45;
+  for (const sx of [-1,1]){
+    if (o.blink){ ctx.fillStyle = C.navy; ctx.fillRect(x + sx*ex - er, ey - 2, er*2, 4); continue; }
+    circle(x + sx*ex, ey, er, C.white);
+    circle(x + sx*ex + lx, ey + ly, er*0.45, C.navy);
+  }
+  ctx.restore();
+}
+// 인공지능 캐릭터: 보라 사각형, 흰 눈 하나
+function agent(x, yBottom, h, o={}){
+  ctx.save(); ctx.globalAlpha *= o.alpha ?? 1;
+  ctx.translate(x, yBottom); ctx.scale(o.scale??1, o.scale??1); ctx.translate(-x, -yBottom);
+  rr(x - h/2, yBottom - h, h, h, h*0.14); ctx.fillStyle = C.purple; ctx.fill();
+  const cx = x + (o.lookX||0)*h*0.15, cy = yBottom - h*0.55 + (o.lookY||0)*h*0.15;
+  if (o.blink){ ctx.fillStyle = C.white; ctx.fillRect(cx - h*0.14, cy - 2, h*0.28, 4); }
+  else circle(cx, cy, h*0.14, C.white);
+  ctx.restore();
+}
+// 화면 밖 존재: 노란 원형 커서
+function cursor(x, y, r, alpha=1){
+  ctx.save(); ctx.globalAlpha *= alpha;
+  ctx.strokeStyle = C.yellow; ctx.lineWidth = 3;
+  ctx.beginPath(); ctx.moveTo(x, y - r*4); ctx.lineTo(x, y - r); ctx.stroke();
+  circle(x, y, r, C.yellow);
+  ctx.beginPath(); ctx.arc(x, y, r*1.5, 0, Math.PI*2); ctx.globalAlpha *= 0.35; ctx.stroke();
+  ctx.restore();
+}
+function heart(x,y,sz,col){
+  ctx.save(); ctx.translate(x,y); ctx.scale(sz/30, sz/30); ctx.fillStyle = col;
+  ctx.beginPath(); ctx.moveTo(0,10); ctx.bezierCurveTo(-30,-10,-12,-32,0,-16); ctx.bezierCurveTo(12,-32,30,-10,0,10); ctx.fill(); ctx.restore();
+}
+function star(x,y,r,col,rot=0){
+  ctx.save(); ctx.translate(x,y); ctx.rotate(rot); ctx.beginPath();
+  for (let i=0;i<10;i++){ const a = i*Math.PI/5 - Math.PI/2, rad = i%2 ? r*0.45 : r; ctx.lineTo(Math.cos(a)*rad, Math.sin(a)*rad); }
+  ctx.closePath(); ctx.fillStyle = col; ctx.fill(); ctx.restore();
+}
+function arrow(x1,y1,x2,y2,col,w=4,head=14){
+  const a = Math.atan2(y2-y1, x2-x1);
+  ctx.save(); ctx.strokeStyle = col; ctx.fillStyle = col; ctx.lineWidth = w; ctx.lineCap = "round";
+  ctx.beginPath(); ctx.moveTo(x1,y1); ctx.lineTo(x2 - Math.cos(a)*head*0.8, y2 - Math.sin(a)*head*0.8); ctx.stroke();
+  ctx.beginPath(); ctx.moveTo(x2,y2); ctx.lineTo(x2 - Math.cos(a-0.45)*head, y2 - Math.sin(a-0.45)*head); ctx.lineTo(x2 - Math.cos(a+0.45)*head, y2 - Math.sin(a+0.45)*head); ctx.fill();
+  ctx.restore();
+}
+
+// 1장면의 작은 세계와 모니터 테두리
+function world(s, o={}){
+  bg(C.navy);
+  ctx.strokeStyle = C.white; ctx.lineWidth = 3; ctx.globalAlpha = 0.9;
+  ctx.beginPath(); ctx.moveTo(300, 470); ctx.lineTo(980, 470); ctx.stroke(); ctx.globalAlpha = 1;
+  if (o.draw) o.draw(); else nemo(640, 470, 110, o.nemo||{});
+}
+function bezel(alpha, stand=0){
+  if (alpha <= 0) return;
+  ctx.save(); ctx.globalAlpha *= alpha;
+  ctx.lineWidth = 36; ctx.strokeStyle = C.navy2; rr(-18, -18, W+36, H+36, 40); ctx.stroke();
+  ctx.lineWidth = 8; ctx.strokeStyle = C.teal; rr(-40, -40, W+80, H+80, 52); ctx.stroke();
+  if (stand > 0){
+    ctx.globalAlpha *= stand; ctx.fillStyle = C.navy2;
+    ctx.fillRect(W/2 - 70, H + 40, 140, 150); rr(W/2 - 260, H + 180, 520, 44, 20); ctx.fill();
+  }
+  ctx.restore();
+}
+// 줌 아웃 된 모니터 (안쪽 세계 포함)
+function monitorView(scale, cx, cy, inner, frameAlpha=1, stand=1, outside=C.navy){
+  bg(outside);
+  ctx.save(); ctx.translate(cx, cy); ctx.scale(scale, scale); ctx.translate(-W/2, -H/2);
+  ctx.save(); rr(0,0,W,H,16); ctx.clip(); inner(); ctx.restore();
+  bezel(frameAlpha, stand);
+  ctx.restore();
+}
+
+// 카드 세 장 (4~7장면)
+const CARD = [280, 640, 1000];
+function cardBase(i, s, rise=true){
+  const d = rise ? P(s, i*0.5, i*0.5 + 0.7) : 1;
+  const x = CARD[i] - 160, y = 150 + (1-d)*420;
+  ctx.save(); ctx.globalAlpha *= d;
+  rr(x, y, 320, 380, 24); ctx.fillStyle = C.navy2; ctx.fill(); ctx.lineWidth = 3; ctx.strokeStyle = C.white; ctx.stroke();
+  ctx.restore();
+  return {cx: CARD[i], cy: y + 170, d};
+}
+function card1(s, cx, cy){
+  const sink = P(s, 2, 5.5), gray = P(s, 6, 7);
+  const col = mix(C.teal, C.gray, gray);
+  ctx.save(); ctx.beginPath(); ctx.rect(cx - 150, cy - 160, 300, 170 + 60); ctx.clip();
+  [[-40,50],[-10,80],[22,60],[48,40]].forEach(([dx,h],k) => {
+    const sk = P(s, 2 + k*0.6, 3.2 + k*0.6);
+    ctx.fillStyle = C.white; ctx.fillRect(cx + dx - 12, cy - 60 - h + sk*(h+70), 24, h);
+  });
+  ctx.restore();
+  circle(cx, cy + 20, 80, col);
+}
+function card2(s, cx, cy){
+  rr(cx - 90, cy - 60, 180, 120, 14); ctx.fillStyle = C.purple; ctx.fill();
+  rr(cx - 76, cy - 48, 152, 90, 8); ctx.fillStyle = C.navy; ctx.fill();
+  const shake = s > 2 && s < 5 ? Math.sin((s-2)*Math.PI*2) * 0.35 : 0;
+  ctx.save(); ctx.translate(cx, cy + 130); ctx.rotate(shake);
+  circle(0, 0, 36, C.yellow); circle(-12, -4, 5, C.navy); circle(12, -4, 5, C.navy);
+  ctx.restore();
+}
+function card3(s, cx, cy, grow=1){
+  const n = s < 2 ? 1 : s < 4 ? 2 : 4;
+  const k = grow < 1 ? 1 : n;
+  const size = 240 / k, gap = size*0.12;
+  for (let r=0;r<k;r++) for (let c=0;c<k;c++){
+    const x = cx - 120 + c*size + gap/2, y = cy - 110 + r*size + gap/2, w = size - gap;
+    rr(x, y, w, w*0.72, 6); ctx.fillStyle = C.navy; ctx.fill(); ctx.strokeStyle = C.teal; ctx.lineWidth = 2; ctx.stroke();
+    nemo(x + w/2, y + w*0.62, w*0.36);
+  }
+}
+function mix(a,b,t){
+  const pa = [1,3,5].map(i => parseInt(a.slice(i,i+2),16)), pb = [1,3,5].map(i => parseInt(b.slice(i,i+2),16));
+  return "rgb(" + pa.map((v,i) => Math.round(lerp(v,pb[i],t))).join(",") + ")";
+}
+function cards(s, active, rise=false){
+  const fns = [card1, card2, card3];
+  const finals = [9, 9, 10];
+  for (let i=0;i<3;i++){
+    const b = cardBase(i, s, rise);
+    const dim = active === null ? 1 : i === active ? 1 : (active === 2 ? 0.25 : 0.4);
+    if (active === null) continue;
+    ctx.save(); ctx.globalAlpha *= dim;
+    if (i < active) fns[i](finals[i], b.cx, b.cy);
+    else if (i === active) fns[i](s, b.cx, b.cy);
+    ctx.restore();
+    if (i > active){ ctx.save(); ctx.globalAlpha = 0.55; rr(CARD[i]-160, 150, 320, 380, 24); ctx.fillStyle = C.navy; ctx.fill(); ctx.restore(); }
+  }
+}
+
+// 점 구름 (8~9장면)
+const DOTS = (() => { const r = rng(7), a = []; for (let i=0;i<420;i++) a.push([520 + r()*680, 130 + r()*420, 3 + r()*4]); return a; })();
+// 신경망 점 (11, 25장면)
+const NET = (() => { const r = rng(3), a = []; for (let i=0;i<14;i++){ const ang = r()*Math.PI*2, rad = Math.sqrt(r())*0.85; a.push([Math.cos(ang)*rad, Math.sin(ang)*rad]); } return a; })();
+function network(cx, cy, R, col, s, snap=false, active=1){
+  const pts = NET.map(([x,y]) => snap ? [Math.round(x*4)/4, Math.round(y*4)/4] : [x,y]).map(([x,y]) => [cx + x*R, cy + y*R]);
+  ctx.save(); ctx.strokeStyle = C.white; ctx.globalAlpha = 0.35; ctx.lineWidth = 2;
+  for (let i=0;i<pts.length;i++) for (let j=i+1;j<pts.length;j++){
+    const d = Math.hypot(pts[i][0]-pts[j][0], pts[i][1]-pts[j][1]);
+    if (d < R*0.55){ ctx.beginPath(); ctx.moveTo(...pts[i]); ctx.lineTo(...pts[j]); ctx.stroke(); }
+  }
+  ctx.restore();
+  pts.forEach(([x,y],i) => {
+    const on = active > 0 && Math.sin(s*5 + i*1.7) > 0.3;
+    circle(x, y, on ? 9 : 6, on ? C.yellow : col);
+  });
+}
+
+// 가상 마을 (14~15장면)
+const HOUSES = [[330,210],[520,180],[760,200],[950,240],[380,410],[640,380],[900,430],[560,500]];
+const AGENTS = (() => { const r = rng(11), a = []; for (let i=0;i<25;i++) a.push({x:250+r()*780, y:170+r()*360, ph:r()*6, sp:0.4+r()*0.5}); return a; })();
+function village(s, o={}){
+  bg(C.navy);
+  rr(200, 120, 880, 450, 30); ctx.fillStyle = C.teal; ctx.globalAlpha = 0.5; ctx.fill(); ctx.globalAlpha = 1;
+  HOUSES.forEach(([x,y],i) => {
+    ctx.fillStyle = C.white; ctx.fillRect(x-28, y-22, 56, 44);
+    ctx.fillStyle = C.navy2; ctx.fillRect(x-8, y+2, 16, 20);
+  });
+  const party = HOUSES[5];
+  const gather = o.gather ?? 0;
+  AGENTS.forEach((g,i) => {
+    let x = g.x + Math.sin(s*g.sp + g.ph)*40, y = g.y + Math.cos(s*g.sp*0.8 + g.ph)*30;
+    const ang = (i/25)*Math.PI*2, tx = party[0] + Math.cos(ang)*(70 + (i%3)*18), ty = party[1] + 40 + Math.sin(ang)*(45 + (i%3)*12);
+    x = lerp(x, tx, gather); y = lerp(y, ty, gather);
+    const look = o.lookUp && i === 7 ? {lookY:-1} : {lookX: Math.sin(s + g.ph)};
+    agent(x, y + 12, 24, look);
+    if (o.talk && (i === 3 || i === 12)){
+      const on = (i === 3) === (Math.floor(s*1.5) % 2 === 0);
+      if (on){ rr(x + 6, y - 44, 44, 26, 10); ctx.fillStyle = C.white; ctx.fill(); text("…", x + 28, y - 32, 20, C.navy); }
+    }
+  });
+  if (gather > 0.8){ const tw = Math.sin(s*8)*0.3 + 1; star(party[0], party[1] - 70, 26*tw, C.yellow, s); }
+}
+
+// 지구와 날아오는 입자 (19~20장면)
+function earthArrows(s, thick){
+  circle(640, 330, 70, C.teal);
+  for (let i=0;i<16;i++){
+    const a = i/16*Math.PI*2, ph = ((s*0.6 + i*0.37) % 1);
+    const r1 = lerp(330, 100, ph), r2 = r1 - 60;
+    const big = thick > 0 && i % 4 === 0;
+    const w = big ? lerp(3, 9, thick) : 3;
+    ctx.save(); ctx.globalAlpha = Math.sin(ph*Math.PI);
+    arrow(640 + Math.cos(a)*r1, 330 + Math.sin(a)*r1, 640 + Math.cos(a)*r2, 330 + Math.sin(a)*r2, C.yellow, w, 12 + w);
+    ctx.restore();
+  }
+}
+
+// ---------- 장면 ----------
+const SCENES = {
+  1(s){ const b = s < 1.2 ? Math.abs(Math.sin(s/1.2*Math.PI))*40 : 0; world(s, {draw(){ nemo(640, 470 - b, 110, {scale: P(s,0,0.35), blink: blinkAt(s,[5, 6.2]), lookY: s > 5.5 ? 0.2 : 0}); }}); },
+  2(s){ const sc = lerp(1, 0.42, P(s,0,8)); monitorView(sc, 640, 330, () => world(s), P(s,4,5), P(s,7,8)); },
+  3(s){ monitorView(0.42, 640, 380, () => world(s, {nemo:{rot: s>5 && s<6.5 ? Math.sin((s-5)*12)*0.12 : 0}})); topText("시뮬레이션 가설", s, 1); },
+  4(s){ bg(); cards(s, null, true); topText("닉 보스트롬, 2003", s, 0.6); },
+  5(s){ bg(); cards(s, 0); topText("1. 그 전에 멸망한다", s, 0.4); },
+  6(s){ bg(); cards(s, 1); topText("2. 할 수 있지만 안 한다", s, 0.4); },
+  7(s){ bg(); cards(s, 2); topText("3. 우리는 시뮬레이션 속에 있다", s, 0.4); },
+  8(s){
+    bg(); circle(260, 340, 100, C.teal); text("진짜", 260, 480, 30, C.white, "center", TITLE);
+    const n = Math.floor(lerp(0, DOTS.length, P(s, 2, 6.5)));
+    for (let i=0;i<n;i++){ const [x,y,r] = DOTS[i]; circle(x, y, r, C.purple); }
+    topText("진짜는 하나, 가짜는 셀 수 없이", s, 7);
+  },
+  9(s){
+    bg(); circle(260, 340, 100, C.teal);
+    DOTS.forEach(([x,y,r]) => circle(x, y, r, C.purple));
+    const target = DOTS[200];
+    let ax, ay;
+    if (s < 5){ ax = 560 + (Math.sin(s*2.1)*0.5 + 0.5)*600; ay = 160 + (Math.cos(s*1.7)*0.5 + 0.5)*360; const k = P(s, 3.6, 5); ax = lerp(ax, target[0], k); ay = lerp(ay, target[1], k); }
+    else { ax = target[0]; ay = target[1]; }
+    const z = P(s, 5.2, 7.6);
+    if (z > 0){
+      const R = lerp(6, 210, z), cx = lerp(target[0], 780, z), cy = lerp(target[1], 340, z);
+      circle(cx, cy, R, C.purple);
+      if (z > 0.35){ ctx.save(); ctx.globalAlpha = P(z, 0.35, 0.7); nemo(cx, cy + R*0.35, R*0.6); ctx.restore(); }
+    }
+    if (z < 0.6) arrow(ax, ay - 90, ax, ay - 14, C.yellow, 6, 18);
+  },
+  10(s){
+    bg(); ctx.strokeStyle = C.white; ctx.lineWidth = 3; ctx.beginPath(); ctx.moveTo(220, 520); ctx.lineTo(620, 520); ctx.stroke();
+    nemo(400, 520, 130, {lookX: 1, lookY: -0.6, blink: blinkAt(s,[3])});
+    rr(640, 170, 300, 200, 30); ctx.fillStyle = C.navy2; ctx.fill();
+    ctx.beginPath(); ctx.moveTo(680, 360); ctx.lineTo(620, 420); ctx.lineTo(730, 365); ctx.fill();
+    ctx.save(); ctx.translate(790, 270); ctx.rotate(s > 2 && s < 3 ? Math.sin((s-2)*Math.PI*4)*0.25 : 0);
+    text("?", 0, 0, 130, C.yellow, "center", TITLE); ctx.restore();
+    topText("가정 1. 의식을 계산할 수 있다", s, 4);
+  },
+  11(s){
+    bg(); circle(390, 340, 170, C.coral); ctx.save(); ctx.globalAlpha = 0.25; circle(390, 340, 170, C.navy); ctx.restore();
+    network(390, 340, 150, C.white, s);
+    rr(720, 170, 340, 340, 18); ctx.fillStyle = C.purple; ctx.globalAlpha = 0.35; ctx.fill(); ctx.globalAlpha = 1;
+    ctx.strokeStyle = C.purple; ctx.lineWidth = 1.5;
+    for (let i=1;i<8;i++){ ctx.beginPath(); ctx.moveTo(720 + i*42.5, 170); ctx.lineTo(720 + i*42.5, 510); ctx.moveTo(720, 170 + i*42.5); ctx.lineTo(1060, 170 + i*42.5); ctx.stroke(); }
+    network(890, 340, 150, C.white, s, true, s > 5 ? 1 : 0);
+    arrow(590, 340, 700, 340, C.yellow, 5, 18);
+  },
+  12(s){
+    bg(); const y = 380;
+    ctx.strokeStyle = C.white; ctx.lineWidth = 4; ctx.beginPath(); ctx.moveTo(140, y); ctx.lineTo(1140, y); ctx.stroke();
+    for (let i=0;i<=10;i++){ const x = 140 + i*100; ctx.lineWidth = 2; ctx.beginPath(); ctx.moveTo(x, y-14); ctx.lineTo(x, y+14); ctx.stroke(); }
+    text("적게", 140, y + 50, 26, C.white); text("많이", 1140, y + 50, 26, C.white);
+    const g = P(s, 1, 5.5), half = lerp(10, 380, g);
+    rr(640 - half, y - 60, half*2, 120, 60); ctx.fillStyle = C.coral; ctx.globalAlpha = 0.4; ctx.fill(); ctx.globalAlpha = 1;
+    [520, 640, 760].forEach((x,i) => { const a = P(s, 6 + i*0.3, 6.6 + i*0.3); text("?", x, y - 110 - (1-a)*20, 64, C.yellow, "center", TITLE, a); });
+    topText("필요한 계산량: 추정치가 수천 배 차이", s, 0.5);
+  },
+  13(s){
+    bg(); const on = s >= 3;
+    rr(380, 150, 520, 320, 20); ctx.fillStyle = on ? C.navy2 : "#081026"; ctx.fill(); ctx.lineWidth = 6; ctx.strokeStyle = C.teal; ctx.stroke();
+    ctx.fillStyle = C.navy2; ctx.fillRect(610, 470, 60, 60); rr(520, 526, 240, 24, 12); ctx.fill();
+    if (on){ const sc = s < 3.6 ? P(s,3,3.6) : 1; agent(640, 420, 120, {scale: sc, lookX: s > 6 ? Math.sin((s-6)*3) : 0, blink: blinkAt(s,[5])}); }
+  },
+  14(s){ village(s, {talk: s > 6, gather: P(s, 8.6, 10.5)}); topText("AI 주민 25명의 가상 마을 (2023)", s, 0.6); },
+  15(s){
+    village(s + 11, {gather: 1});
+    const y = lerp(-120, 150, P(s, 2, 5));
+    cursor(640, y, 26);
+    if (s > 6){ const party = HOUSES[5]; ctx.save(); ctx.strokeStyle = C.yellow; ctx.globalAlpha = 0.5; ctx.setLineDash([6,8]); ctx.beginPath(); ctx.moveTo(party[0], party[1] + 20); ctx.lineTo(640, y + 30); ctx.stroke(); ctx.restore(); }
+  },
+  16(s){
+    bg(); const open = P(s, 0, 0.6);
+    ctx.fillStyle = C.navy2; ctx.fillRect(0, 0, W/2 * open, H);
+    ctx.strokeStyle = C.white; ctx.lineWidth = 4; ctx.beginPath(); ctx.moveTo(W/2, 0); ctx.lineTo(W/2, H*open); ctx.stroke();
+    const b = blinkAt(s, [4]);
+    agent(320, 500, 200, {lookY: -1, blink: b, alpha: open});
+    nemo(960, 500, 200, {lookY: -1, blink: b, alpha: open});
+  },
+  17(s){
+    bg(); const cell = lerp(2, 44, P(s, 2.5, 9.5)), R = lerp(200, 250, P(s, 2, 10));
+    if (cell < 3){ circle(640, 310, R, C.teal); }
+    else {
+      ctx.fillStyle = C.teal;
+      for (let x = 640 - R - cell; x < 640 + R + cell; x += cell) for (let y = 310 - R - cell; y < 310 + R + cell; y += cell){
+        const cx = Math.floor((x - 640)/cell)*cell + cell/2, cy = Math.floor((y - 310)/cell)*cell + cell/2;
+        if (cx*cx + cy*cy <= R*R) ctx.fillRect(640 + cx - cell/2, 310 + cy - cell/2, cell - (cell > 12 ? 2 : 0), cell - (cell > 12 ? 2 : 0));
+      }
+    }
+  },
+  18(s){
+    bg(); ctx.save(); ctx.strokeStyle = C.purple; ctx.globalAlpha = 0.25; ctx.lineWidth = 1.5;
+    for (let x=0;x<=W;x+=64){ ctx.beginPath(); ctx.moveTo(x,0); ctx.lineTo(x,H); ctx.stroke(); }
+    for (let y=0;y<=H;y+=64){ ctx.beginPath(); ctx.moveTo(0,y); ctx.lineTo(W,y); ctx.stroke(); }
+    ctx.restore();
+    const r = rng(21);
+    for (let i=0;i<22;i++){
+      const aligned = i % 3 === 0, ang = aligned ? (Math.floor(r()*4))*Math.PI/2 : r()*Math.PI*2, off = r();
+      const ph = ((s*0.35 + off) % 1), cx = 640 + (r()-0.5)*700, cy = 330 + (r()-0.5)*400;
+      if (s < 2 && off > s/2) continue;
+      const d = lerp(-500, 500, ph), x = cx + Math.cos(ang)*d, y = cy + Math.sin(ang)*d;
+      const bright = aligned ? lerp(0.55, 1, P(s, 7, 8)) : lerp(0.55, 0.3, P(s, 7, 8));
+      ctx.save(); ctx.globalAlpha = bright;
+      ctx.strokeStyle = C.yellow; ctx.lineWidth = aligned && s > 7 ? 5 : 3; ctx.beginPath(); ctx.moveTo(x, y); ctx.lineTo(x - Math.cos(ang)*60, y - Math.sin(ang)*60); ctx.stroke();
+      circle(x, y, aligned && s > 7 ? 8 : 5, C.yellow); ctx.restore();
+    }
+    topText("격자의 흔적을 찾자 (2012)", s, 0.6);
+  },
+  19(s){ bg(); earthArrows(s, P(s, 5, 6)); },
+  20(s){
+    bg(); earthArrows(s, 1 - P(s, 2, 3));
+    const a = P(s, 5, 5.35);
+    if (a > 0){ ctx.save(); ctx.translate(640, 90); ctx.rotate(-0.08); ctx.scale(lerp(1.8, 1, a), lerp(1.8, 1, a)); ctx.globalAlpha = a;
+      ctx.strokeStyle = C.coral; ctx.lineWidth = 5; rr(-190, -40, 380, 80, 12); ctx.stroke(); text("아직 발견 안 됨", 0, 2, 44, C.coral, "center", TITLE); ctx.restore(); }
+  },
+  21(s){
+    bg(); const groups = [[250, 2], [640, 10], [1030, 50]];
+    groups.forEach(([cx, n], gi) => {
+      const r = rng(40 + gi), rad = n <= 2 ? 16 : n <= 10 ? 13 : 8;
+      for (let i=0;i<n;i++){ const x = cx + (n === 2 ? (i ? 22 : -22) : (r()-0.5)*200), y = 480 + (n === 2 ? 0 : (r()-0.5)*60); circle(x, y, rad, C.teal); }
+      const g = P(s, 1 + gi*2.2, 3 + gi*2.2), h = [30, 150, 1200][gi]*g;
+      rr(cx - 50, 430 - h, 100, h, 10); ctx.fillStyle = C.coral; ctx.fill();
+    });
+    text("입자 2개", 250, 545, 24, C.white); text("10개", 640, 545, 24, C.white); text("50개", 1030, 545, 24, C.white);
+  },
+  22(s){
+    bg(); const a = P(s, 2, 2.8);
+    ctx.save(); ctx.globalAlpha = a; ctx.translate(640, 350); ctx.scale(lerp(0.7, 1, a), lerp(0.7, 1, a));
+    ctx.strokeStyle = C.white; ctx.lineWidth = 6;
+    for (let i=0;i<5;i++){ const o = -96 + i*48; [[o,-150,o,-120],[o,120,o,150],[-150,o,-120,o],[120,o,150,o]].forEach(([x1,y1,x2,y2]) => { ctx.beginPath(); ctx.moveTo(x1,y1); ctx.lineTo(x2,y2); ctx.stroke(); }); }
+    rr(-120, -120, 240, 240, 24); ctx.fillStyle = C.purple; ctx.fill();
+    const on = s > 5 && Math.sin((s-5)*6) > 0;
+    for (let r=0;r<4;r++) for (let c=0;c<4;c++) circle(-72 + c*48, -72 + r*48, 12, on ? C.yellow : C.navy2);
+    ctx.restore();
+    topText("파인만, 1981", s, 0.6);
+  },
+  23(s){
+    const outside = () => {
+      const ang = s*0.35, g = ctx.createLinearGradient(640 + Math.cos(ang)*800, 360 + Math.sin(ang)*800, 640 - Math.cos(ang)*800, 360 - Math.sin(ang)*800);
+      g.addColorStop(0, C.coral); g.addColorStop(1, C.purple); ctx.fillStyle = g; ctx.fillRect(0,0,W,H);
+    };
+    outside();
+    ctx.save(); ctx.translate(640, 360); ctx.scale(0.5, 0.5); ctx.translate(-W/2, -H/2);
+    ctx.save(); rr(0,0,W,H,16); ctx.clip(); world(s); ctx.restore(); bezel(1, 1); ctx.restore();
+    const peek = s > 6 ? Math.sin(P(s, 6, 8.5)*Math.PI) : 0;
+    if (peek > 0) cursor(W + 40 - peek*120, 300, 24, peek);
+  },
+  24(s){
+    bg(); const tilt = Math.sin(s*2.2)*0.06*(s > 2 ? 1 : P(s,0,2));
+    ctx.fillStyle = C.navy2; ctx.fillRect(630, 250, 20, 290); rr(560, 530, 160, 24, 10); ctx.fill();
+    ctx.save(); ctx.translate(640, 250); ctx.rotate(tilt);
+    ctx.strokeStyle = C.white; ctx.lineWidth = 6; ctx.beginPath(); ctx.moveTo(-300, 0); ctx.lineTo(300, 0); ctx.stroke();
+    for (const sx of [-1, 1]){
+      const px = sx*280;
+      ctx.lineWidth = 2; ctx.beginPath(); ctx.moveTo(px, 0); ctx.lineTo(px - 70, 150); ctx.moveTo(px, 0); ctx.lineTo(px + 70, 150); ctx.stroke();
+      ctx.save(); ctx.translate(px, 150); ctx.rotate(-tilt);
+      ctx.beginPath(); ctx.ellipse(0, 0, 90, 18, 0, 0, Math.PI*2); ctx.fillStyle = C.teal; ctx.fill();
+      if (sx < 0){ rr(-60, -60, 120, 50, 10); ctx.fillStyle = C.yellow; ctx.fill(); text("가설", 0, -35, 28, C.navy, "center", TITLE); }
+      ctx.restore();
+    }
+    ctx.restore();
+    topText("반증할 수 있는가?", s, 0.6);
+  },
+  25(s){
+    bg(); text("?", 640, 360, 180, C.yellow, "center", TITLE);
+    const ends = [[250, 330], [640, 120], [1030, 330]];
+    ends.forEach(([x,y],i) => {
+      const g = P(s, 1 + i*3, 2.2 + i*3); if (g <= 0) return;
+      ctx.strokeStyle = C.white; ctx.lineWidth = 4; ctx.beginPath(); ctx.moveTo(640, 360); ctx.lineTo(lerp(640, x, g), lerp(360, y, g)); ctx.stroke();
+      if (g < 1) return;
+      ctx.save(); ctx.globalAlpha = P(s, 2.2 + i*3, 2.7 + i*3);
+      circle(x, y, 90, C.navy2);
+      if (i === 0) network(x, y, 70, C.coral, s);
+      if (i === 1){ rr(x-50, y-50, 100, 100, 14); ctx.fillStyle = C.purple; ctx.fill(); for (let r=0;r<3;r++) for (let c=0;c<3;c++) circle(x-26+c*26, y-26+r*26, 7, C.yellow); }
+      if (i === 2){ ctx.strokeStyle = C.purple; ctx.lineWidth = 3; for (let k=-2;k<=2;k++){ ctx.beginPath(); ctx.moveTo(x+k*22, y-55); ctx.lineTo(x+k*22, y+55); ctx.moveTo(x-55, y+k*22); ctx.lineTo(x+55, y+k*22); ctx.stroke(); } }
+      ctx.restore();
+    });
+  },
+  26(s){
+    world(s, {draw(){
+      const look = s > 6 ? P(s, 6, 6.6) : 0;
+      nemo(560, 470, 110, {lookX: look, blink: blinkAt(s,[4])});
+      agent(730, 470, 90, {lookX: -look});
+      for (let i=0;i<3;i++){ const t = s - 2 - i*0.7; if (t > 0 && t < 4){ ctx.save(); ctx.globalAlpha = Math.sin(clamp(t/4)*Math.PI); heart(640 + (i-1)*50, 330 - t*40, 26, C.yellow); ctx.restore(); } }
+    }});
+  },
+  27(s){
+    const sc = lerp(1, 0.4, P(s, 0, 6));
+    monitorView(sc, 640, 330, () => world(s, {nemo:{blink: blinkAt(s,[3])}}), P(s, 1, 2.5), P(s, 3, 4.5));
+    if (s > 5 && s < 5.25) cursor(1120, 120, 14);
+    if (s > 5.5 && s < 5.75) cursor(1120, 120, 14);
+  }
+};
+
+// ---------- 타임라인 ----------
+const TL = []; let acc = 0;
+DOC.scenes.forEach(sc => { TL.push({...sc, start: acc}); acc += sc.duration_sec; });
+const TOTAL = acc;
+
+function wrap(str, max){
+  ctx.font = `30px ${BODY}`;
+  const words = str.split(" "), lines = []; let cur = "";
+  words.forEach(w => { const t = cur ? cur + " " + w : w; if (ctx.measureText(t).width > max && cur){ lines.push(cur); cur = w; } else cur = t; });
+  if (cur) lines.push(cur); return lines;
+}
+function subtitle(str, s, dur){
+  const a = Math.min(P(s, 0, 0.25), 1 - P(s, dur - 0.2, dur));
+  const lines = wrap(str, 1060);
+  const h = lines.length*42 + 24, y0 = H - 28 - h;
+  ctx.save(); ctx.globalAlpha = a;
+  ctx.fillStyle = "rgba(5,10,28,0.62)"; rr(W/2 - 580, y0, 1160, h, 14); ctx.fill();
+  lines.forEach((l,i) => text(l, W/2, y0 + 12 + 21 + i*42, 30, C.white));
+  ctx.restore();
+}
+function drawScene(i, s){
+  ctx.save(); ctx.globalAlpha = 1;
+  SCENES[TL[i].id](s);
+  ctx.restore();
+}
+function drawAt(t){
+  t = clamp(t, 0, TOTAL - 1e-4);
+  let i = TL.findIndex(sc => t < sc.start + sc.duration_sec); if (i < 0) i = TL.length - 1;
+  const sc = TL[i], s = t - sc.start, dur = sc.duration_sec;
+  ctx.setTransform(1,0,0,1,0,0); ctx.globalAlpha = 1;
+  drawScene(i, s);
+  const tr = sc.transition || "", left = dur - s;
+  // 페이드: 남색으로 어두워졌다가 다음 장면이 밝아짐
+  if (tr.includes("페이드") && i + 1 < TL.length && left < 0.6){
+    ctx.save(); ctx.globalAlpha = 1 - left/0.6; ctx.fillStyle = C.navy; ctx.fillRect(0,0,W,H); ctx.restore();
+  }
+  if (i > 0 && (TL[i-1].transition||"").includes("페이드") && s < 0.6){
+    ctx.save(); ctx.globalAlpha = 1 - s/0.6; ctx.fillStyle = C.navy; ctx.fillRect(0,0,W,H); ctx.restore();
+  }
+  if (tr.includes("암전") && left < 1.4){ ctx.save(); ctx.globalAlpha = P(1.4 - left, 0, 1.2); ctx.fillStyle = "#000"; ctx.fillRect(0,0,W,H); ctx.restore(); }
+  subtitle(sc.narration, s, dur);
+}
+window.drawAt = drawAt; window.TOTAL = TOTAL;
+
+// ---------- 플레이어 ----------
+const playBtn = document.getElementById("play"), seek = document.getElementById("seek"), timeEl = document.getElementById("time");
+let playing = false, t0 = 0, pos = 0;
+const fmt = x => `${Math.floor(x/60)}:${String(Math.floor(x%60)).padStart(2,"0")}`;
+function show(){ drawAt(pos); seek.value = Math.round(pos/TOTAL*1000); timeEl.textContent = `${fmt(pos)} / ${fmt(TOTAL)}`; }
+function loop(now){ if (!playing) return; pos = (now - t0)/1000; if (pos >= TOTAL){ pos = TOTAL; playing = false; playBtn.textContent = "다시 재생"; show(); return; } show(); requestAnimationFrame(loop); }
+playBtn.addEventListener("click", () => {
+  if (playing){ playing = false; playBtn.textContent = "재생"; return; }
+  if (pos >= TOTAL) pos = 0;
+  playing = true; playBtn.textContent = "일시정지"; t0 = performance.now() - pos*1000; requestAnimationFrame(loop);
+});
+seek.addEventListener("input", () => { pos = seek.value/1000*TOTAL; t0 = performance.now() - pos*1000; show(); });
+(document.fonts ? document.fonts.ready : Promise.resolve()).then(() => { pos = 1.5; show(); pos = 0; timeEl.textContent = `0:00 / ${fmt(TOTAL)}`; });
+</script>
+</body></html>
