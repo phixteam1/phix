@@ -43,6 +43,9 @@ header p { margin: 0; color: var(--muted); max-width: 62ch; }
 .panel { background: var(--panel); border: 1px solid var(--line); border-radius: 10px; padding: 16px; display: grid; gap: 14px; min-width: 0; }
 .label { font-size: 11px; font-weight: 600; letter-spacing: 0.08em; text-transform: uppercase; color: var(--muted); margin: 0; }
 .drop { border: 1.5px dashed var(--line); border-radius: 8px; padding: 14px; text-align: center; color: var(--muted); cursor: pointer; transition: border-color .15s, background .15s; }
+.drop { display: block; position: relative; }
+.vh { position: absolute; width: 1px; height: 1px; opacity: 0; overflow: hidden; clip: rect(0 0 0 0); }
+.drop:focus-within { outline: 2px solid var(--accent); outline-offset: 2px; }
 .drop:hover, .drop.over { border-color: var(--accent); color: var(--ink); }
 .drop:focus-visible, button:focus-visible, input:focus-visible, select:focus-visible { outline: 2px solid var(--accent); outline-offset: 2px; }
 .list { display: grid; gap: 8px; }
@@ -95,8 +98,9 @@ header p { margin: 0; color: var(--muted); max-width: 62ch; }
   <div class="grid">
     <div class="panel">
       <p class="label">이미지 (위에서부터 순서대로)</p>
-      <div class="drop" id="drop" tabindex="0" role="button">여기로 이미지를 끌어오거나 눌러서 고르기<br><small>PNG · JPG · WEBP, 2장 이상</small></div>
-      <input type="file" id="file" accept="image/*" multiple hidden>
+      <label class="drop" id="drop" for="file">여기로 이미지를 끌어오거나 눌러서 고르기<br><small>PNG · JPG · WEBP, 2장 이상</small>
+        <input type="file" id="file" accept="image/*,.png,.jpg,.jpeg,.webp,.gif,.bmp" multiple class="vh">
+      </label>
       <p class="sample" id="sampleNote">지금은 예시로 사자·바나나·비행기 그림이 들어 있어. 새 이미지를 넣으면 예시는 빠져.</p>
       <div class="list" id="list"></div>
 
@@ -2422,14 +2426,15 @@ function loadImage(url) {
 
 let sampleMode = true;
 async function addFiles(files) {
-  const imgs = [...files].filter(f => f.type.startsWith("image/"));
-  if (!imgs.length) return;
+  // 일부 모바일 앱은 파일 형식을 비워서 넘기니 확장자로도 확인한다
+  const imgs = [...files].filter(f => f.type.startsWith("image/") || /\.(png|jpe?g|webp|gif|bmp|avif)$/i.test(f.name));
+  if (!imgs.length) { $("status").textContent = files.length ? "이미지 파일이 아니라서 못 넣었어. PNG나 JPG로 넣어줘." : ""; return; }
   if (sampleMode) { items = []; sampleMode = false; $("sampleNote").hidden = true; }
   for (const f of imgs) {
     try {
       const im = await loadImage(URL.createObjectURL(f));
       items.push({ name: f.name, src: im, bg: borderColor(im) });
-    } catch { $("status").textContent = `${f.name}은 열 수 없는 이미지야.`; }
+    } catch { $("status").textContent = `${f.name}은 이 브라우저에서 열 수 없는 형식이야. PNG나 JPG로 바꿔서 넣어줘.`; }
   }
   rebuild(); seek(0);
 }
@@ -2562,9 +2567,7 @@ $("play").onclick = () => { playing = !playing; $("play").textContent = playing 
 $("scrub").addEventListener("input", e => { playing = false; $("play").textContent = "재생"; cur = e.target.value / 1000 * total(); });
 $("make").onclick = makeVideo;
 const drop = $("drop"), file = $("file");
-drop.onclick = () => file.click();
-drop.onkeydown = e => { if (e.key === "Enter" || e.key === " ") { e.preventDefault(); file.click(); } };
-file.onchange = () => { addFiles(file.files); file.value = ""; };
+file.addEventListener("change", () => { const fs = [...file.files]; file.value = ""; addFiles(fs); });
 drop.addEventListener("dragover", e => { e.preventDefault(); drop.classList.add("over"); });
 drop.addEventListener("dragleave", () => drop.classList.remove("over"));
 drop.addEventListener("drop", e => { e.preventDefault(); drop.classList.remove("over"); addFiles(e.dataTransfer.files); });
