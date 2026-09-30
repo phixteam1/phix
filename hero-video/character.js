@@ -317,10 +317,29 @@ function drawTorso(ctx) {
   ctx.fillStyle = "rgba(255,255,255,0.13)"; ctx.beginPath(); ctx.ellipse(215, 640, 55, 80, 0.3, 0, 7); ctx.fill();
   ctx.fillStyle = "rgba(0,20,70,0.3)"; ctx.beginPath(); ctx.ellipse(310, 850, 210, 70, 0, 0, 7); ctx.fill();
   ctx.restore();
+  drawChestMark(ctx, 305, 665, 58);
+}
+function drawChestMark(ctx, cx, cy, r) {   // 가슴 동그라미 마크: 헬멧 엠블럼과 같은 주황 원 + 노란 띠
+  ctx.save();
+  ctx.fillStyle = "rgba(0,20,70,0.35)"; ctx.beginPath(); ctx.arc(cx + 3, cy + 5, r + 9, 0, 7); ctx.fill();
+  const rim = ctx.createLinearGradient(cx - r, cy - r, cx + r, cy + r);
+  rim.addColorStop(0, "#fff6d8"); rim.addColorStop(1, "#e0a020");
+  ctx.fillStyle = rim; ctx.beginPath(); ctx.arc(cx, cy, r + 7, 0, 7); ctx.fill();
+  const g = ctx.createRadialGradient(cx - r * 0.35, cy - r * 0.4, r * 0.1, cx, cy, r);
+  g.addColorStop(0, PAL.orange[0]); g.addColorStop(0.6, PAL.orange[1]); g.addColorStop(1, PAL.orange[2]);
+  ctx.fillStyle = g; ctx.beginPath(); ctx.arc(cx, cy, r, 0, 7); ctx.fill();
+  ctx.save(); ctx.beginPath(); ctx.arc(cx, cy, r, 0, 7); ctx.clip();
+  ctx.translate(cx, cy); ctx.rotate(0.2);
+  const y = ctx.createLinearGradient(-r * 0.3, 0, r * 0.3, 0);
+  y.addColorStop(0, "#ffd060"); y.addColorStop(0.5, "#ffe590"); y.addColorStop(1, "#f0a010");
+  ctx.fillStyle = y; ctx.fillRect(-r * 0.26, -r - 2, r * 0.52, r * 2 + 4);
+  ctx.restore();
+  ctx.fillStyle = "rgba(255,255,255,0.45)"; ctx.beginPath(); ctx.ellipse(cx - r * 0.35, cy - r * 0.55, r * 0.3, r * 0.12, -0.5, 0, 7); ctx.fill();
+  ctx.restore();
 }
 
 // pose (각도는 라디안): x, y, s, rot, torso, head, aL=[어깨, 팔꿈치], aR, lL=[엉덩이, 무릎], lR, gL, gR (손목 꺾임),
-//       cape {rot, wave, speed, stretch}, face {mouth, eyes, blink, look, brow}, prop: "spray" | "hand" | "none", lBack, rBack
+//       cape {rot, wave, speed, stretch}, face {mouth, eyes, blink, look, brow}, prop: "spray" | "hand" | "hip" | "none", lBack, rBack
 const BASE = { rot: 0, torso: 0, head: 0, aL: [-0.78, 2.22], aR: [0.29, -1.57], lL: [-0.44, -0.44], lR: [0.87, 0.87], gL: 0.52, gR: 0.23, extAng: 0 };
 function skeleton(P) {
   const up = p => rot2(p, P.torso, SK.pelvis);
@@ -355,6 +374,7 @@ function drawChar(ctx, pose, t) {
   };
 
   bodyRot(() => drawCape(ctx, P, t));
+  if (P.prop === "hip") bodyRot(() => attached(ctx, J.valve, [SK.hipR[0] + 60, SK.hipR[1] - 150], 0.3, () => drawExtinguisher(ctx)));   // 허리 뒤에 멘 소화기
   if (P.rBack) { armR(); fistR(); }
   if (P.lBack) { armL(); fistL(); }
   // 몸통과 두 다리는 한 덩어리: 테두리를 먼저 다 긋고, 그 위를 칠해서 이음새 선이 안 생기게
@@ -376,7 +396,9 @@ function drawChar(ctx, pose, t) {
     ctx.beginPath(); ctx.moveTo(valve[0] - 10, valve[1] - 20); ctx.quadraticCurveTo((valve[0] + nb[0]) / 2, Math.min(valve[1], nb[1]) - 40, nb[0], nb[1]); ctx.stroke();
   } else if (P.prop === "hand") {
     const d = [Math.cos(fR), Math.sin(fR)];
-    attached(ctx, [288, 640], [K.wrR[0] + d[0] * 62, K.wrR[1] + d[1] * 62 + 12], P.extAng, () => drawExtinguisher(ctx));
+    const grip = [K.wrR[0] + d[0] * 62, K.wrR[1] + d[1] * 62 + 12];
+    attached(ctx, [288, 640], grip, P.extAng, () => drawExtinguisher(ctx));
+    K.extBottom = rot2([grip[0] + 22, grip[1] + 375], P.extAng, grip);   // 소화기 바닥 (분사 위치)
   }
   if (!P.rBack) fistR();
   if (!P.lBack) fistL();
@@ -391,9 +413,12 @@ const POSES = {   // 각도: 0 = 아래, π = 위, +는 화면 오른쪽. [윗�
   stand: { aL: [-0.22, -0.08], aR: [0.22, 0.08], gL: 0, gR: 0, lL: [-0.1, -0.04], lR: [0.1, 0.04], prop: "hand", cape: { rot: 0.5, wave: 8, speed: 3 }, face: { mouth: "smile" } },
   run: { torso: 0.08, aL: [-0.45, -2.5], aR: [0.35, 0.15], gL: 0, gR: 0, lL: [-0.2, -0.1], lR: [1.2, 0.25], prop: "none", cape: { rot: -0.05, wave: 18, speed: 10, stretch: 1.1 }, face: { mouth: "open", brow: 1 } },
   flyUp: { rot: -0.15, aL: [-2.55, -2.9], aR: [0.25, 0.1], gL: 0, gR: 0, lL: [0.12, 0.3], lR: [-0.12, -0.3], prop: "hand", extAng: 0.2, cape: { rot: 0.9, wave: 26, speed: 12, stretch: 1.2 }, face: { mouth: "grit", brow: 1 } },
-  lift: { head: -0.06, aL: [-2.25, -2.75], aR: [2.25, 2.75], gL: 0, gR: 0, lL: [-0.25, -0.1], lR: [0.25, 0.1], prop: "none", cape: { rot: 0.4, wave: 12, speed: 5 }, face: { mouth: "open", look: [0, -1] } },
-  throwDown: { torso: 0.12, head: 0.1, aL: [-1.1, -0.7], aR: [1.1, 0.7], gL: 0, gR: 0, lL: [-0.35, -0.1], lR: [0.6, 0.2], prop: "none", cape: { rot: -0.8, wave: 22, speed: 10 }, face: { mouth: "grit", brow: 1 } },
-  cheer: { aL: [-0.9, 0.7], aR: [2.3, 2.75], gL: 0.3, gR: 0, lL: [-0.12, -0.04], lR: [0.12, 0.04], prop: "none", cape: { rot: 0.3, wave: 12, speed: 5 }, face: { mouth: "open", eyes: "happy" } },
+  lift: { head: -0.06, aL: [-2.25, -2.75], aR: [2.25, 2.75], gL: 0, gR: 0, lL: [-0.25, -0.1], lR: [0.25, 0.1], prop: "hip", cape: { rot: 0.4, wave: 12, speed: 5 }, face: { mouth: "open", look: [0, -1] } },
+  throwDown: { torso: 0.12, head: 0.1, aL: [-1.1, -0.7], aR: [1.1, 0.7], gL: 0, gR: 0, lL: [-0.35, -0.1], lR: [0.6, 0.2], prop: "hip", cape: { rot: -0.8, wave: 22, speed: 10 }, face: { mouth: "grit", brow: 1 } },
+  crouch: { aL: [-0.55, -0.25], aR: [0.5, 0.2], gL: 0, gR: 0, lL: [-0.8, 0.25], lR: [0.8, -0.25], prop: "hand", cape: { rot: 0.2, wave: 10, speed: 6 }, face: { mouth: "grit", brow: 1 } },
+  dive: { aL: [-1.0, -1.5], aR: [0.9, 0.5], gL: 0, gR: 0, lL: [-0.25, -0.1], lR: [0.25, 0.1], prop: "hand", cape: { rot: 1.2, wave: 22, speed: 12, stretch: 1.1 }, face: { mouth: "open" } },
+  hover: { aL: [-0.35, -0.9], aR: [0.35, 0.9], gL: 0, gR: 0, lL: [-0.12, 0.1], lR: [0.12, -0.1], prop: "hip", cape: { rot: 0.5, wave: 14, speed: 7 }, face: { mouth: "smile", look: [0, 1] } },
+  cheer: { aL: [-0.9, 0.7], aR: [2.3, 2.75], gL: 0.3, gR: 0, lL: [-0.12, -0.04], lR: [0.12, 0.04], prop: "hip", cape: { rot: 0.3, wave: 12, speed: 5 }, face: { mouth: "open", eyes: "happy" } },
 };
 
 // 두 포즈 사이를 k(0~1)만큼 섞는다. 각도와 숫자는 선형으로, 나머지(표정, 소품)는 가까운 쪽을 따른다.

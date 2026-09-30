@@ -3,7 +3,7 @@
 import base64, sys
 b64 = lambda p: base64.b64encode(open(p, "rb").read()).decode()
 tpl = open("player.html", encoding="utf-8").read()
-page = tpl.replace("__FONT__", b64("dohyeon-sub.woff2")).replace("__HERO__", b64("hero.png")).replace("__SCENE__", open("scene.js", encoding="utf-8").read())
+page = tpl.replace("__FONT__", b64("dohyeon-sub.woff2")).replace("__CHAR__", open("parts.js", encoding="utf-8").read() + "\n" + open("character.js", encoding="utf-8").read()).replace("__SCENE__", open("scene.js", encoding="utf-8").read())
 audio = "data:audio/mp4;base64," + b64(sys.argv[1]) if len(sys.argv) > 1 else ""
 open("app.html", "w", encoding="utf-8").write(page.replace("__AUDIO__", audio))
 head = '<!doctype html><html lang="ko"><head><meta charset="utf-8"><script>window.RENDER=1</script></head><body>'

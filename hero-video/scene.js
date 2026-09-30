@@ -2,9 +2,7 @@
 // 모든 입자는 t와 번호만으로 위치가 정해져서 아무 시점으로나 건너뛸 수 있다.
 const W = 1080, H = 1920, TOTAL = 30;
 const cv = document.getElementById("c"), ctx = cv.getContext("2d");
-const hero = new Image();
-hero.src = HERO_SRC;
-const HW = 756, HH = 1033, HCX = 378, HCY = 516;   // 스프라이트 크기와 중심
+const HCX = 378, HCY = 516;   // 캐릭터 좌표(원본 그림 756x1033)에서의 중심
 const NOZZLE = [20, 713], CAN_BOTTOM = [334, 1015]; // 스프라이트 안의 노즐 끝, 소화기 바닥
 
 const T = { LAND: 2.0, SPRAY0: 3.2, SPRAY1: 9.0, FLARE: 7.0, CROUCH: 9.6, LAUNCH: 10.4, CAM0: 10.6, CAM1: 14.3,
@@ -108,19 +106,38 @@ function heroState(t, cam) {
   return st;
 }
 
+// 시간별 포즈 (character.js의 POSES). [시작, 끝, 포즈] 사이 빈 구간은 앞뒤 포즈를 섞는다.
+const POSE_KEYS = [
+  [0, T.LAND - 0.05, t => POSES.dive],
+  [T.LAND + 0.35, T.SPRAY0 - 0.5, t => POSES.stand],
+  [T.SPRAY0 - 0.1, T.SPRAY1 + 0.2, t => Object.assign({}, POSES.spray, { face: { mouth: t > T.FLARE && t < T.FLARE + 0.8 ? "grit" : "open", brow: t > T.FLARE ? 1 : 0 } })],
+  [T.CROUCH, T.LAUNCH, t => POSES.crouch],
+  [T.LAUNCH + 0.15, T.CAM1 + 0.2, t => POSES.flyUp],
+  [T.CH0, T.THROW - 0.25, t => POSES.lift],
+  [T.THROW - 0.05, T.THROW + 0.7, t => POSES.throwDown],
+  [T.THROW + 1.2, T.DESC0 - 0.2, t => POSES.hover],
+  [T.DESC0, T.LAND2 - 0.05, t => POSES.dive],
+  [T.LAND2 + 0.3, 27.6, t => POSES.stand],
+  [27.9, TOTAL, t => POSES.cheer],
+];
+function heroPose(t) {
+  for (let i = 0; i < POSE_KEYS.length; i++) {
+    const [a, b, f] = POSE_KEYS[i];
+    if (t <= b || i === POSE_KEYS.length - 1) {
+      if (t >= a || i === 0) return f(t);
+      const [, pb, pf] = POSE_KEYS[i - 1];
+      return lerpPose(pf(pb), f(a), eio(seg(t, pb, a)));
+    }
+  }
+}
+let heroK = null;   // 마지막으로 그린 관절 위치 (소화기 바닥 등)
 function drawHero(st, t) {
-  if (!st.vis || !hero.complete || !hero.naturalWidth) return;
+  if (!st.vis) return;
   ctx.save();
   ctx.translate(st.x, st.y); ctx.rotate(st.rot * Math.PI / 180); ctx.scale(st.s * st.sx, st.s * st.sy); ctx.translate(-HCX, -HCY);
-  const CX = 570, Y0 = 470, Y1 = 830;
-  ctx.drawImage(hero, 0, 0, CX, HH, 0, 0, CX, HH);
-  ctx.drawImage(hero, CX, 0, HW - CX, Y0, CX, 0, HW - CX, Y0);
-  ctx.drawImage(hero, CX, Y1, HW - CX, HH - Y1, CX, Y1, HW - CX, HH - Y1);
-  for (let x = CX; x < HW; x += 4) {   // 망토 펄럭임: 세로 띠를 물결 모양으로 밀어서 그린다
-    const k = (x - CX) / (HW - CX);
-    const dy = st.cape * Math.pow(k, 1.4) * Math.sin(t * 9 - k * 4);
-    ctx.drawImage(hero, x, Y0, 4, Y1 - Y0, x, Y0 + dy, 4.6, Y1 - Y0);
-  }
+  const P = heroPose(t);
+  P.cape = Object.assign({}, P.cape, { wave: Math.max(P.cape?.wave ?? 10, st.cape * 1.5) });
+  heroK = drawChar(ctx, Object.assign({}, P, { x: SK.pelvis[0], y: SK.pelvis[1], s: 1 }), t);
   ctx.restore();
 }
 function heroPoint(st, p) {
@@ -278,7 +295,7 @@ function drawSpray(t, st) {
 // 날아오를 때 소화기 바닥에서 뿜는 분사
 function drawJet(t, st) {
   if (t < T.LAUNCH || t > T.CAM1 + 0.8) return;
-  const [bx, by] = heroPoint(st, CAN_BOTTOM);
+  const [bx, by] = heroPoint(st, heroK && heroK.extBottom || CAN_BOTTOM);
   const on = 1 - seg(t, T.CAM1, T.CAM1 + 0.8);
   const a = st.rot * Math.PI / 180;
   for (let i = 0; i < 60; i++) {
