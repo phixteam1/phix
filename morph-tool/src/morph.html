@@ -113,9 +113,12 @@ header p { margin: 0; color: var(--muted); max-width: 62ch; }
       <p class="hint">많을수록 윤곽을 꼼꼼히 따라가지만, 모양 차이가 크면 꼬이기 쉬워.</p>
       <div class="row"><label for="thr">배경 구분 기준</label><output id="thrOut"></output><input type="range" id="thr" min="8" max="120" step="2" value="36"></div>
       <p class="hint">썸네일의 노란 선이 물체 윤곽을 잘 따라가면 성공. 배경까지 먹으면 올리고, 물체가 잘리면 내려.</p>
+      <div class="row"><label for="K">색 단계</label><output id="KOut"></output><input type="range" id="K" min="4" max="24" step="1" value="12"></div>
+      <p class="hint">형태 모핑에서 그림을 몇 가지 색 조각으로 나눌지. 많을수록 원본에 가깝지만 조각이 잘게 쪼개져.</p>
       <div class="row"><label for="mode">변환 방식</label>
         <select id="mode">
-          <option value="contour">윤곽 맞춰 휘기 + 섞기</option>
+          <option value="shape">형태 모핑 (색 조각이 모양째 변함)</option>
+          <option value="contour">윤곽 맞춰 휘기 + 섞기 (사진용)</option>
           <option value="fade">그냥 섞기(크로스페이드)</option>
         </select>
       </div>
@@ -144,10 +147,11 @@ header p { margin: 0; color: var(--muted); max-width: 62ch; }
 
   <section class="how">
     <h2>어떻게 만드나</h2>
-    <p>1. 각 이미지 테두리 색에서 시작해 비슷한 색을 따라 번져 나가며 배경을 찾고, 남은 가장 큰 덩어리를 물체로 봐. 그 외곽선을 따서 같은 간격의 점 N개로 나눠.</p>
-    <p>2. 두 윤곽의 점 번호를 돌려 맞춰서, 모양이 가장 비슷하게 겹치는 짝을 고르고, 화면 가장자리 점까지 더해 삼각형 그물을 만들어.</p>
-    <p>3. 중간 프레임마다 점 위치를 보간하고, 삼각형 하나하나를 앞 이미지와 뒤 이미지에서 떼어 와 휘어 붙인 다음 두 장을 섞어.</p>
-    <p>잘 되는 건 단색이나 단순한 배경 위 물체 하나, 비슷한 크기와 방향의 물체끼리야. 배경이 복잡한 사진, 물체가 여러 개인 그림, 얼굴처럼 눈·코·입 위치를 맞춰야 하는 경우는 외곽선만 맞추니까 안쪽이 흐릿하게 겹쳐 보여. 그럴 땐 "그냥 섞기"가 차라리 깔끔해.</p>
+    <p>1. 각 이미지 테두리 색에서 시작해 비슷한 색을 따라 번져 나가며 배경을 찾고, 남은 가장 큰 덩어리를 물체로 봐.</p>
+    <p>2. 물체를 "색 단계" 수만큼의 색으로 줄이고, 같은 색끼리 붙은 덩어리를 하나의 조각으로 떼어내. 조각마다 외곽선을 따서 점으로 나눠.</p>
+    <p>3. 앞뒤 그림에서 위치·색·크기가 비슷한 조각끼리 짝을 지어. 짝이 없는 조각은 한 점으로 줄어들어 사라지거나 한 점에서 자라나.</p>
+    <p>4. 중간 프레임마다 조각의 점 위치와 색을 같이 보간해서 그려. 두 그림을 겹쳐 섞지 않으니까 반투명하게 비치는 부분이 없어.</p>
+    <p>잘 되는 건 색이 또렷하게 나뉜 일러스트, 단순한 배경 위 물체 하나야. 사진이나 그라데이션이 많은 그림은 조각이 잘게 쪼개져서 중간이 어수선해져. 그럴 땐 "색 단계"를 낮추거나, 사진이면 "휘기 + 섞기"가 더 나아.</p>
   </section>
 </div>
 
@@ -162,7 +166,7 @@ const $ = id => document.getElementById(id);
 const view = $("view"), vctx = view.getContext("2d");
 const tmp = document.createElement("canvas"), tctx = tmp.getContext("2d");
 
-const S = { W: 720, H: 720, morph: 2, hold: 0.8, N: 72, thr: 36, mode: "contour", loop: true, lines: false };
+const S = { W: 720, H: 720, morph: 2, hold: 0.8, N: 72, thr: 36, K: 12, mode: "shape", loop: true, lines: false };
 let items = [];       // {name, src: HTMLImageElement, fitted: canvas, contour: [[x,y]]|null, area}
 let pairs = [];       // 전환마다 {a, b, A, B, tris} (A,B는 대응점 배열)
 let playing = true, t0 = performance.now(), cur = 0, busy = false;
@@ -199,7 +203,7 @@ function fit(item) {
 // ------------------------------------------------------------ 물체 윤곽 찾기
 
 function findContour(canvas) {
-  const sc = 220 / Math.max(canvas.width, canvas.height);
+  const sc = 280 / Math.max(canvas.width, canvas.height);
   const w = Math.max(8, Math.round(canvas.width * sc)), h = Math.max(8, Math.round(canvas.height * sc));
   const c = document.createElement("canvas"); c.width = w; c.height = h;
   const x = c.getContext("2d", { willReadFrequently: true });
@@ -246,10 +250,17 @@ function findContour(canvas) {
   }
   const area = bestN / (w * h);
   if (!best || area < 0.01 || area > 0.97) return { contour: null, area };
-  const inside = (px, py) => px >= 0 && py >= 0 && px < w && py < h && lab[py * w + px] === best;
-  // 무어 이웃 외곽선 추적 (시계 방향)
   let start = -1;
   for (let i = 0; i < w * h; i++) if (lab[i] === best) { start = i; break; }
+  const pts = traceOuter(i => lab[i] === best, w, h, start);
+  const grid = { w, h, d, bg, lab, best, kx: canvas.width / w, ky: canvas.height / h };
+  if (pts.length < 8) return { contour: null, area, grid };
+  return { contour: pts.map(([a, b]) => [(a + 0.5) * grid.kx, (b + 0.5) * grid.ky]), area, grid };
+}
+
+// 무어 이웃 외곽선 추적 (start는 덩어리의 래스터 순서 첫 픽셀)
+function traceOuter(inIdx, w, h, start) {
+  const inside = (x, y) => x >= 0 && y >= 0 && x < w && y < h && inIdx(y * w + x);
   const D = [[1, 0], [1, 1], [0, 1], [-1, 1], [-1, 0], [-1, -1], [0, -1], [1, -1]];
   const dirOf = (dx, dy) => D.findIndex(v => v[0] === dx && v[1] === dy);
   let px = start % w, py = (start / w) | 0, bx = px - 1, by = py;
@@ -266,13 +277,155 @@ function findContour(canvas) {
       }
     }
     if (!moved) break;
-    const key = `${px},${py},${bx},${by}`;
+    const key = px + "," + py + "," + bx + "," + by;
     if (first === null) first = key; else if (key === first) break;
     pts.push([px, py]);
   }
-  if (pts.length < 8) return { contour: null, area };
-  const kx = canvas.width / w, ky = canvas.height / h;
-  return { contour: pts.map(([a, b]) => [(a + 0.5) * kx, (b + 0.5) * ky]), area };
+  return pts;
+}
+
+// ------------------------------------------------------------ 색 조각으로 나누기 (형태 모핑용)
+
+function vectorize(item) {
+  const g = item.grid;
+  if (!g || !item.contour) return null;
+  const { w, h, d, lab, best, kx, ky } = g, n = w * h;
+  const obj = new Uint8Array(n);
+  let cnt = 0, sr = 0, sg = 0, sb = 0, br = 0, bgc = 0, bgg = 0, bgb = 0, nb = 0;
+  for (let i = 0; i < n; i++) {
+    if (lab[i] === best) { obj[i] = 1; cnt++; sr += d[i * 4]; sg += d[i * 4 + 1]; sb += d[i * 4 + 2]; }
+    else if (g.bg[i]) { nb++; bgc += d[i * 4]; bgg += d[i * 4 + 1]; bgb += d[i * 4 + 2]; }
+  }
+  // k-평균으로 물체 색을 K가지로 줄인다
+  const K = S.K, px = [];
+  for (let i = 0; i < n; i++) if (obj[i]) px.push(i);
+  const C = [];
+  const col = i => [d[i * 4], d[i * 4 + 1], d[i * 4 + 2]];
+  const dist2 = (a, b) => (a[0] - b[0]) ** 2 + (a[1] - b[1]) ** 2 + (a[2] - b[2]) ** 2;
+  let rnd = 12345; const rand = () => (rnd = (rnd * 1103515245 + 12345) & 0x7fffffff) / 0x7fffffff;
+  C.push(col(px[(rand() * px.length) | 0]));
+  const dd = new Float32Array(px.length).fill(Infinity);
+  while (C.length < K) {
+    let sum = 0;
+    for (let j = 0; j < px.length; j++) { dd[j] = Math.min(dd[j], dist2(col(px[j]), C[C.length - 1])); sum += dd[j]; }
+    if (sum === 0) break;
+    let r = rand() * sum, j = 0;
+    for (; j < px.length - 1; j++) { r -= dd[j]; if (r <= 0) break; }
+    C.push(col(px[j]));
+  }
+  const L = new Int16Array(n).fill(-1);
+  for (let it = 0; it < 10; it++) {
+    const acc = C.map(() => [0, 0, 0, 0]);
+    for (const i of px) {
+      const c = col(i); let bi = 0, bd = Infinity;
+      for (let k = 0; k < C.length; k++) { const v = dist2(c, C[k]); if (v < bd) { bd = v; bi = k; } }
+      L[i] = bi; const a = acc[bi]; a[0] += c[0]; a[1] += c[1]; a[2] += c[2]; a[3]++;
+    }
+    acc.forEach((a, k) => { if (a[3]) C[k] = [a[0] / a[3], a[1] / a[3], a[2] / a[3]]; });
+  }
+  // 경계의 얇은 중간색을 없애려고 3x3 최빈값 필터 한 번
+  const L2 = L.slice();
+  for (const i of px) {
+    const x = i % w, y = (i / w) | 0, votes = new Map();
+    for (let dy = -1; dy <= 1; dy++) for (let dx = -1; dx <= 1; dx++) {
+      const nx = x + dx, ny = y + dy;
+      if (nx < 0 || ny < 0 || nx >= w || ny >= h) continue;
+      const l = L[ny * w + nx]; if (l >= 0) votes.set(l, (votes.get(l) || 0) + 1);
+    }
+    let bl = L[i], bv = 0; for (const [l, v] of votes) if (v > bv) { bv = v; bl = l; }
+    L2[i] = bl;
+  }
+  // 같은 색끼리 이어진 덩어리 = 조각
+  const seen = new Uint8Array(n), q = new Int32Array(n), regions = [];
+  const minA = Math.max(6, cnt * 0.003);
+  for (const s0 of px) {
+    if (seen[s0]) continue;
+    const l = L2[s0]; let qh = 0, qt = 0, a = 0, cx = 0, cy = 0, r = 0, gg = 0, b = 0;
+    q[qt++] = s0; seen[s0] = 1;
+    while (qh < qt) {
+      const i = q[qh++], x = i % w, y = (i / w) | 0; a++; cx += x; cy += y; r += d[i * 4]; gg += d[i * 4 + 1]; b += d[i * 4 + 2];
+      for (const [dx, dy] of [[1, 0], [-1, 0], [0, 1], [0, -1]]) {
+        const nx = x + dx, ny = y + dy;
+        if (nx < 0 || ny < 0 || nx >= w || ny >= h) continue;
+        const k = ny * w + nx;
+        if (!seen[k] && obj[k] && L2[k] === l) { seen[k] = 1; q[qt++] = k; }
+      }
+    }
+    if (a < minA) continue;
+    const members = new Set(q.subarray(0, qt));
+    const pts = traceOuter(i => members.has(i), w, h, s0);
+    if (pts.length < 3) continue;
+    regions.push({ label: l, area: a, cx: cx / a, cy: cy / a, color: [r / a, gg / a, b / a], contour: pts.map(([x, y]) => [(x + 0.5) * kx, (y + 0.5) * ky]) });
+  }
+  regions.sort((p, q2) => q2.area - p.area);
+  // 바탕 실루엣은 가장 넓게 쓰인 색으로 칠한다 (평균색은 탁해서 가장자리에 테두리처럼 보인다)
+  const tally = new Map();
+  for (const r of regions) { const k = r.label; tally.set(k, (tally.get(k) || 0) + r.area); }
+  let domL = -1, domA = 0; for (const [k, v] of tally) if (v > domA) { domA = v; domL = k; }
+  const silColor = domL >= 0 ? C[domL] : [sr / cnt, sg / cnt, sb / cnt];
+  regions.length = Math.min(regions.length, 90);
+  let x0 = Infinity, y0 = Infinity, x1 = -Infinity, y1 = -Infinity;
+  for (const [x, y] of item.contour) { x0 = Math.min(x0, x); y0 = Math.min(y0, y); x1 = Math.max(x1, x); y1 = Math.max(y1, y); }
+  const bbox = { x0, y0, w: Math.max(1, x1 - x0), h: Math.max(1, y1 - y0) };
+  for (const r of regions) { r.cx = (r.cx + 0.5) * kx; r.cy = (r.cy + 0.5) * ky; r.rx = (r.cx - x0) / bbox.w; r.ry = (r.cy - y0) / bbox.h; r.frac = r.area / cnt; }
+  return {
+    bg: nb ? [bgc / nb, bgg / nb, bgb / nb] : [255, 255, 255],
+    sil: { contour: item.contour, color: silColor, area: cnt, frac: 1 },
+    regions, bbox,
+  };
+}
+
+function perimeter(pts) { let s = 0; for (let i = 0; i < pts.length; i++) { const a = pts[i], b = pts[(i + 1) % pts.length]; s += Math.hypot(b[0] - a[0], b[1] - a[1]); } return s; }
+
+function buildShapePair(a, b) {
+  const va = a.vec, vb = b.vec;
+  // 비슷한 위치·색·크기의 조각끼리 짝짓기 (비용이 낮은 것부터)
+  const cand = [];
+  va.regions.forEach((ra, i) => vb.regions.forEach((rb, j) => {
+    const pos = Math.hypot(ra.rx - rb.rx, ra.ry - rb.ry);
+    const colr = Math.sqrt((ra.color[0] - rb.color[0]) ** 2 + (ra.color[1] - rb.color[1]) ** 2 + (ra.color[2] - rb.color[2]) ** 2) / 441;
+    const size = Math.abs(Math.log(ra.frac / rb.frac));
+    cand.push([pos + 0.5 * colr + 0.25 * size, i, j]);
+  }));
+  cand.sort((p, q) => p[0] - q[0]);
+  const ua = new Set(), ub = new Set(), links = [[va.sil, vb.sil]];
+  for (const [c, i, j] of cand) {
+    if (c > 1.1) break;
+    if (ua.has(i) || ub.has(j)) continue;
+    ua.add(i); ub.add(j); links.push([va.regions[i], vb.regions[j]]);
+  }
+  // 짝 없는 조각은 상대 그림의 같은 상대 위치로 줄어들거나 거기서 자라난다
+  const at = (vec, r) => [vec.bbox.x0 + r.rx * vec.bbox.w, vec.bbox.y0 + r.ry * vec.bbox.h];
+  va.regions.forEach((r, i) => { if (!ua.has(i)) links.push([r, { point: at(vb, r), color: r.color, frac: 0 }]); });
+  vb.regions.forEach((r, j) => { if (!ub.has(j)) links.push([{ point: at(va, r), color: r.color, frac: 0 }, r]); });
+  const shapes = links.map(([ra, rb]) => {
+    const n = Math.max(16, Math.min(160, Math.round(Math.max(ra.contour ? perimeter(ra.contour) : 0, rb.contour ? perimeter(rb.contour) : 0) / 5)));
+    let A = ra.contour ? resample(ra.contour, n) : null, B = rb.contour ? resample(rb.contour, n) : null;
+    if (A && B) B = alignShift(A, B);
+    if (!A) A = Array.from({ length: n }, () => ra.point.slice());
+    if (!B) B = Array.from({ length: n }, () => rb.point.slice());
+    return { A, B, cA: ra.color, cB: rb.color, fA: ra.frac, fB: rb.frac };
+  });
+  return { a, b, shapes, bgA: va.bg, bgB: vb.bg };
+}
+
+function drawShapes(ctx, pair, e) {
+  const lerp = (x, y) => x + (y - x) * e;
+  const rgb = (c1, c2) => `rgb(${Math.round(lerp(c1[0], c2[0]))},${Math.round(lerp(c1[1], c2[1]))},${Math.round(lerp(c1[2], c2[2]))})`;
+  ctx.fillStyle = rgb(pair.bgA, pair.bgB); ctx.fillRect(0, 0, S.W, S.H);
+  // 큰 조각부터 그리고 작은 조각을 위에 얹는다
+  const order = pair.shapes.map((s, i) => [lerp(s.fA, s.fB), i]).sort((p, q) => q[0] - p[0]);
+  for (const [, i] of order) {
+    const s = pair.shapes[i], n = s.A.length;
+    const P = s.A.map((p, k) => [lerp(p[0], s.B[k][0]), lerp(p[1], s.B[k][1])]);
+    ctx.fillStyle = rgb(s.cA, s.cB);
+    ctx.beginPath();
+    // 꼭짓점 사이 중점을 지나는 곡선으로 매끈하게
+    const mid = k => [(P[k][0] + P[(k + 1) % n][0]) / 2, (P[k][1] + P[(k + 1) % n][1]) / 2];
+    let m = mid(n - 1); ctx.moveTo(m[0], m[1]);
+    for (let k = 0; k < n; k++) { m = mid(k); ctx.quadraticCurveTo(P[k][0], P[k][1], m[0], m[1]); }
+    ctx.closePath(); ctx.fill();
+  }
 }
 
 function resample(pts, n) {
@@ -354,6 +507,7 @@ function framePoints() {
 }
 
 function buildPair(a, b) {
+  if (S.mode === "shape" && a.vec && b.vec) return buildShapePair(a, b);
   if (S.mode === "fade" || !a.contour || !b.contour) return { a, b, A: null };
   const ca = resample(a.contour, S.N), cb = alignShift(ca, resample(b.contour, S.N));
   const fp = framePoints();
@@ -365,7 +519,7 @@ function buildPair(a, b) {
 
 function rebuild() {
   view.width = tmp.width = S.W; view.height = tmp.height = S.H;
-  for (const it of items) { fit(it); Object.assign(it, findContour(it.fitted)); }
+  for (const it of items) { fit(it); Object.assign(it, findContour(it.fitted)); it.vec = S.mode === "shape" ? vectorize(it) : null; }
   pairs = [];
   const n = items.length;
   for (let i = 0; i < n - 1 + (S.loop && n > 1 ? 1 : 0); i++) pairs.push(buildPair(items[i], items[(i + 1) % n]));
@@ -456,6 +610,15 @@ function draw(ctx, time, overlay) {
   // 양 끝만 살짝 누그러뜨리고 전환 내내 고르게 움직인다 (가운데에 변화가 몰리면 뚝 끊겨 보인다)
   const { pair, p } = at, e = p + (ease(p) - p) * 0.5;
   const mix = p + (smooth(0, 1, p) - p) * 0.5;
+  if (pair.shapes) {
+    // 모양과 색이 함께 변한다. 양 끝의 아주 짧은 구간만 원본 그림과 조각 그림 사이를 이어준다 (모양은 같음).
+    drawShapes(ctx, pair, e);
+    const edge = 0.12;
+    if (p < edge) { ctx.globalAlpha = 1 - smooth(0, edge, p); ctx.drawImage(pair.a.fitted, 0, 0); }
+    else if (p > 1 - edge) { ctx.globalAlpha = smooth(1 - edge, 1, p); ctx.drawImage(pair.b.fitted, 0, 0); }
+    ctx.globalAlpha = 1;
+    return;
+  }
   if (!pair.A) {
     ctx.drawImage(pair.a.fitted, 0, 0);
     ctx.globalAlpha = mix; ctx.drawImage(pair.b.fitted, 0, 0); ctx.globalAlpha = 1;
@@ -522,13 +685,16 @@ async function addFiles(files) {
   // 일부 모바일 앱은 파일 형식을 비워서 넘기니 확장자로도 확인한다
   const imgs = [...files].filter(f => f.type.startsWith("image/") || /\.(png|jpe?g|webp|gif|bmp|avif)$/i.test(f.name));
   if (!imgs.length) { $("status").textContent = files.length ? "이미지 파일이 아니라서 못 넣었어. PNG나 JPG로 넣어줘." : ""; return; }
-  if (sampleMode) { items = []; sampleMode = false; $("sampleNote").hidden = true; }
+  const added = [];
   for (const f of imgs) {
     try {
       const im = await loadImage(await dataUrl(f));
-      items.push({ name: f.name, src: im, bg: borderColor(im) });
+      added.push({ name: f.name, src: im, bg: borderColor(im) });
     } catch { $("status").textContent = `${f.name}은 이 브라우저에서 열 수 없는 형식이야. PNG나 JPG로 바꿔서 넣어줘.`; }
   }
+  if (!added.length) return;
+  if (sampleMode) { items = []; sampleMode = false; $("sampleNote").hidden = true; }
+  items.push(...added);
   rebuild(); seek(0);
 }
 
@@ -652,6 +818,7 @@ bindRange("morph", "morph", v => v.toFixed(1) + "초");
 bindRange("hold", "hold", v => v.toFixed(1) + "초");
 bindRange("npts", "N", v => v + "개", true);
 bindRange("thr", "thr", v => String(v), true);
+bindRange("K", "K", v => v + "색", true);
 $("size").addEventListener("change", e => { const [w, h] = e.target.value.split("x").map(Number); S.W = w; S.H = h; rebuild(); });
 $("mode").addEventListener("change", e => { S.mode = e.target.value; rebuild(); });
 $("loop").addEventListener("change", e => { S.loop = e.target.checked; rebuild(); });
