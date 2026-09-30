@@ -21,7 +21,6 @@ local = src.replace("<!--MUXER-->", "<script>/* mp4-muxer 5.2.2, MIT License, ht
 local = '<!doctype html>\n<html lang="ko">\n<head>\n<meta charset="utf-8">\n<meta name="viewport" content="width=device-width, initial-scale=1">\n' + local.replace("<div class=\"wrap\">", "</head>\n<body>\n<div class=\"wrap\">", 1) + "\n</body>\n</html>\n"
 
 art = src.replace("<!--MUXER-->", '<script src="https://cdn.jsdelivr.net/npm/mp4-muxer@5.2.2/build/mp4-muxer.js"></script>')
-art = art.replace("/*SAVE_NOTE*/", 'status.textContent += " 이 페이지 안에서는 저장 버튼이 막혀 있을 수 있어. 그럴 땐 모핑공방.html 파일을 받아서 크롬으로 열어 써줘.";')
 
 (ROOT / "dist").mkdir(exist_ok=True)
 (ROOT / "dist/모핑공방.html").write_text(local, encoding="utf-8")

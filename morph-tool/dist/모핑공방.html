@@ -2522,9 +2522,19 @@ async function makeVideo() {
     const v = document.createElement("video"); v.src = url; v.controls = true; v.loop = true; v.muted = true; v.playsInline = true; v.autoplay = true;
     const a = document.createElement("a"); a.href = url; a.download = `morph.${ext}`; a.className = "btn primary"; a.textContent = `morph.${ext} 저장 (${(blob.size / 1048576).toFixed(1)}MB)`;
     a.style.justifySelf = "start"; a.style.textDecoration = "none";
+    if (window.claude && window.claude.use) {
+      // claude.ai 안에서는 일반 다운로드가 막혀 있어서 downloads 기능으로 저장한다
+      const dl = await window.claude.use("downloads");
+      if (dl) {
+        a.removeAttribute("href"); a.removeAttribute("download"); a.setAttribute("role", "button"); a.tabIndex = 0; a.style.cursor = "pointer";
+        a.onclick = async () => {
+          try { await dl.save({ filename: `morph.${ext}`, data: blob }); status.textContent = "저장했어."; }
+          catch (e) { if (e && e.code !== "declined") status.textContent = "저장 실패: " + (e.message || e.code); }
+        };
+      }
+    }
     $("result").append(v, a);
     status.textContent = `완성: ${S.W}×${S.H}, ${T.toFixed(1)}초, ${fps}fps.`;
-    /*SAVE_NOTE*/
   } catch (e) {
     status.textContent = "영상 만들기 실패: " + (e && e.message || e);
   } finally {
