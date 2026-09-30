@@ -107,7 +107,7 @@ header p { margin: 0; color: var(--muted); max-width: 62ch; }
           <option value="1080x1920">세로 1080×1920</option>
         </select>
       </div>
-      <div class="row"><label for="morph">변하는 시간</label><output id="morphOut"></output><input type="range" id="morph" min="0.5" max="5" step="0.1" value="1.6"></div>
+      <div class="row"><label for="morph">변하는 시간</label><output id="morphOut"></output><input type="range" id="morph" min="0.5" max="5" step="0.1" value="2"></div>
       <div class="row"><label for="hold">멈춰 있는 시간</label><output id="holdOut"></output><input type="range" id="hold" min="0" max="4" step="0.1" value="0.8"></div>
       <div class="row"><label for="npts">윤곽 점 개수</label><output id="nptsOut"></output><input type="range" id="npts" min="16" max="160" step="4" value="72"></div>
       <p class="hint">많을수록 윤곽을 꼼꼼히 따라가지만, 모양 차이가 크면 꼬이기 쉬워.</p>
@@ -162,7 +162,7 @@ const $ = id => document.getElementById(id);
 const view = $("view"), vctx = view.getContext("2d");
 const tmp = document.createElement("canvas"), tctx = tmp.getContext("2d");
 
-const S = { W: 720, H: 720, morph: 1.6, hold: 0.8, N: 72, thr: 36, mode: "contour", loop: true, lines: false };
+const S = { W: 720, H: 720, morph: 2, hold: 0.8, N: 72, thr: 36, mode: "contour", loop: true, lines: false };
 let items = [];       // {name, src: HTMLImageElement, fitted: canvas, contour: [[x,y]]|null, area}
 let pairs = [];       // 전환마다 {a, b, A, B, tris} (A,B는 대응점 배열)
 let playing = true, t0 = performance.now(), cur = 0, busy = false;
@@ -453,11 +453,12 @@ function draw(ctx, time, overlay) {
     if (overlay && at.still.contour) outline(ctx, resample(at.still.contour, S.N));
     return;
   }
-  const { pair, p } = at, e = ease(p);
-  const mix = smooth(0.2, 0.8, e);   // 모양이 먼저 움직이고 색은 가운데서 넘어간다
+  // 양 끝만 살짝 누그러뜨리고 전환 내내 고르게 움직인다 (가운데에 변화가 몰리면 뚝 끊겨 보인다)
+  const { pair, p } = at, e = p + (ease(p) - p) * 0.5;
+  const mix = p + (smooth(0, 1, p) - p) * 0.5;
   if (!pair.A) {
     ctx.drawImage(pair.a.fitted, 0, 0);
-    ctx.globalAlpha = ease(p); ctx.drawImage(pair.b.fitted, 0, 0); ctx.globalAlpha = 1;
+    ctx.globalAlpha = mix; ctx.drawImage(pair.b.fitted, 0, 0); ctx.globalAlpha = 1;
     return;
   }
   const P = pair.A.map((q, i) => [q[0] + (pair.B[i][0] - q[0]) * e, q[1] + (pair.B[i][1] - q[1]) * e]);
