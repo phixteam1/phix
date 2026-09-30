@@ -143,3 +143,16 @@ for n, p in P.items():
         d.polygon([tuple(q) for q in c], fill=tuple(p["col"][1]) if p["col"] else (120, 0, 0), outline=(0, 0, 0))
 pim.save('parts.png')
 print({n: (len(p["paths"]), sum(len(c) for c in p["paths"])) for n, p in P.items()})
+
+# ---- 몸통 v2: 팔다리를 뺀 몸통. 소화기, 장갑 뒤 가려진 곳은 채운다
+from skimage.draw import polygon as dpoly
+def poly(pts):
+    m = np.zeros_like(lab, bool); rr, cc = dpoly([p[1] for p in pts], [p[0] for p in pts], lab.shape); m[rr, cc] = True; return m
+region = poly([(190, 548), (420, 548), (452, 578), (462, 640), (455, 700), (450, 770), (420, 812), (215, 815), (165, 790), (150, 700), (148, 640), (160, 578)])
+hidden = poly([(190, 590), (440, 590), (440, 800), (200, 800)])
+t2 = (blue | hidden) & region
+t2 = fill(ndimage.binary_closing(t2, iterations=8))
+t2 = ndimage.binary_opening(t2, iterations=20)
+part("torso2", t2, tol=1.5, smooth=3)
+json.dump(P, open('parts.json', 'w'))
+open('../parts.js', 'w').write('// trace/trace.py가 원본 그림에서 딴 부위별 윤곽선\nconst PARTS = ' + json.dumps(P, separators=(',', ':')) + ';\n')

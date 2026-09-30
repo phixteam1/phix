@@ -1,8 +1,8 @@
 // 소화기 히어로를 벡터로 그린다. 머리, 장갑, 장화, 소화기, 망토 모양은 원본 그림에서 딴 윤곽선(parts.js)을 쓰고,
 // 팔다리는 관절 위치로 그때그때 만든다. 좌표는 원본 그림(756x1033) 픽셀 단위.
-// drawChar(ctx, pose, t): pose.x, pose.y는 골반(J.pelvis)이 놓일 화면 위치.
+// drawChar(ctx, pose, t): pose.x, pose.y는 골반(SK.pelvis)이 놓일 화면 위치.
 const PAL = {
-  purple: ["#a36ae0", "#6c35ad", "#3a1068"], blue: ["#4a86ea", "#1f58c4", "#0a2c78"], red: ["#ff7058", "#f0220c", "#a00400"],
+  purple: ["#a36ae0", "#6c35ad", "#3a1068"], blue: ["#3a78dc", "#0a4aa6", "#00235f"], red: ["#ff7058", "#f0220c", "#a00400"],
   yellow: ["#ffd347", "#fbb015", "#d68502"], orange: ["#ffa24a", "#f27a18", "#b85800"], face: ["#fffaf2", "#ffeede", "#f6cdb4"],
   hair: ["#3a3a40", "#141416", "#000"], black: ["#5a5a62", "#222226", "#050505"], gold: ["#ffe36a", "#f5b400", "#a87200"],
 };
@@ -117,22 +117,28 @@ function drawFist(ctx, p, ang, sc = 1) {
     const g = ctx.createRadialGradient(cx + L[0] * r * 0.45, cy + L[1] * r * 0.45, r * 0.08, cx, cy, r * 1.1);
     g.addColorStop(0, PAL.red[0]); g.addColorStop(0.55, PAL.red[1]); g.addColorStop(1, PAL.red[2]); return g;
   };
-  // 커프 + 주먹 + 손가락 마디 + 엄지를 한 덩어리로: 테두리를 먼저 굵게 긋고 그 위를 한 번에 칠해 이음새가 안 보이게
+  // 원본 장갑: 커프 없이 둥근 주먹 하나. 앞쪽으로 말린 손가락 세 줄 + 위쪽 엄지.
   const blob = () => {
     ctx.beginPath();
-    ctx.ellipse(10, 0, 20, 46, 0, 0, 7);
-    ctx.roundRect(12, -50, 96, 100, [44, 48, 52, 44]);
-    for (let i = 0; i < 4; i++) ctx.ellipse(100, -33 + i * 22, 14, 13, 0, 0, 7);
-    ctx.ellipse(56, -42, 36, 18, 0.15, 0, 7);
+    ctx.roundRect(-6, -46, 116, 92, [40, 46, 46, 40]);
+    ctx.ellipse(44, -38, 34, 15, 0.12, 0, 7);
   };
-  blob(); ctx.lineJoin = "round"; ctx.lineWidth = 6; ctx.strokeStyle = "#8a0300"; ctx.globalAlpha = 0.55; ctx.stroke(); ctx.globalAlpha = 1;
-  blob(); ctx.fillStyle = grad(58, 0, 72); ctx.fill("nonzero");
-  // 손가락 사이 주름, 엄지 경계, 커프 경계
-  ctx.lineCap = "round"; ctx.strokeStyle = "rgba(150,0,0,0.4)"; ctx.lineWidth = 3.5;
-  for (let i = 1; i < 4; i++) { const y = -33 + i * 22 - 11; ctx.beginPath(); ctx.moveTo(84, y + 1); ctx.quadraticCurveTo(100, y - 1, 112, y + 1); ctx.stroke(); }
-  ctx.strokeStyle = "rgba(150,0,0,0.25)"; ctx.beginPath(); ctx.moveTo(34, -26); ctx.quadraticCurveTo(58, -20, 86, -28); ctx.stroke();
-  ctx.beginPath(); ctx.moveTo(24, -40); ctx.quadraticCurveTo(30, 0, 24, 40); ctx.stroke();
-  ctx.fillStyle = "rgba(255,255,255,0.32)"; ctx.beginPath(); ctx.ellipse(52, -48, 20, 6, 0.15, 0, 7); ctx.fill();
+  blob(); ctx.lineJoin = "round"; ctx.lineWidth = 5; ctx.strokeStyle = "#7a0a10"; ctx.globalAlpha = 0.6; ctx.stroke(); ctx.globalAlpha = 1;
+  blob(); ctx.fillStyle = grad(52, 0, 70); ctx.fill("nonzero");
+  ctx.save(); blob(); ctx.clip();
+  ctx.lineCap = "round";
+  for (let i = 0; i < 3; i++) {   // 손가락 마디 (위는 가늘고 아래로 갈수록 휘어짐)
+    const x = 58 + i * 17;
+    ctx.strokeStyle = "rgba(140,0,0,0.42)"; ctx.lineWidth = 4;
+    ctx.beginPath(); ctx.moveTo(x - 4, -22); ctx.bezierCurveTo(x + 8, -6, x + 6, 20, x - 6, 36); ctx.stroke();
+    ctx.strokeStyle = "rgba(255,190,170,0.35)"; ctx.lineWidth = 3;
+    ctx.beginPath(); ctx.moveTo(x + 3, -18); ctx.bezierCurveTo(x + 13, -4, x + 12, 16, x + 3, 30); ctx.stroke();
+  }
+  ctx.strokeStyle = "rgba(140,0,0,0.3)"; ctx.lineWidth = 3.5;   // 엄지 경계
+  ctx.beginPath(); ctx.moveTo(14, -26); ctx.quadraticCurveTo(44, -18, 76, -28); ctx.stroke();
+  ctx.fillStyle = "rgba(90,0,0,0.25)"; ctx.beginPath(); ctx.ellipse(52, 46, 60, 16, 0, 0, 7); ctx.fill();   // 아래쪽 그늘
+  ctx.restore();
+  ctx.fillStyle = "rgba(255,255,255,0.35)"; ctx.beginPath(); ctx.ellipse(40, -44, 18, 5, 0.12, 0, 7); ctx.fill();
   ctx.restore();
 }
 function drawBoot(ctx, side) {
@@ -258,79 +264,143 @@ function drawHead(ctx, P) {
 }
 
 const rot2 = (p, a, c) => { const dx = p[0] - c[0], dy = p[1] - c[1]; return [c[0] + dx * Math.cos(a) - dy * Math.sin(a), c[1] + dx * Math.sin(a) + dy * Math.cos(a)]; };
-const TORSO = [[200, 548], [420, 548], [492, 592], [498, 680], [468, 772], [446, 852], [315, 884], [184, 852], [160, 772], [132, 680], [138, 592]];
+
+// ---------- 뼈대 (각도로 포즈를 준다). 각도 0 = 아래, +는 화면 오른쪽으로 돈다.
+const SK = {
+  pelvis: [315, 800], neck: [305, 560], shL: [145, 612], shR: [450, 615], hipL: [200, 790], hipR: [400, 790],
+  upper: [95, 89], fore: [46, 42], thigh: [70, 72], shin: [70, 72],   // [왼쪽, 오른쪽] 길이
+  rArm: [50, 46, 42], rLeg: [64, 61, 58],   // 관절별 두께 (어깨·팔꿈치·손목 / 엉덩이·무릎·발목)
+};
+const dirv = a => [Math.sin(a), Math.cos(a)];
+const step = (p, a, l) => [p[0] + Math.sin(a) * l, p[1] + Math.cos(a) * l];
+
+function capsulePath(ctx, A, B, rA, rB) {   // 두 원을 잇는 캡슐 (항상 같은 방향으로 감아서 합쳐도 구멍이 안 생기게)
+  const a = Math.atan2(B[1] - A[1], B[0] - A[0]);
+  ctx.moveTo(A[0] + Math.cos(a - Math.PI / 2) * rA, A[1] + Math.sin(a - Math.PI / 2) * rA);
+  ctx.lineTo(B[0] + Math.cos(a - Math.PI / 2) * rB, B[1] + Math.sin(a - Math.PI / 2) * rB);
+  ctx.arc(B[0], B[1], rB, a - Math.PI / 2, a + Math.PI / 2);
+  ctx.lineTo(A[0] + Math.cos(a + Math.PI / 2) * rA, A[1] + Math.sin(a + Math.PI / 2) * rA);
+  ctx.arc(A[0], A[1], rA, a + Math.PI / 2, a + Math.PI * 1.5);
+  ctx.closePath();
+}
+function chainPath(ctx, pts, rs) { ctx.beginPath(); for (let i = 0; i < pts.length - 1; i++) capsulePath(ctx, pts[i], pts[i + 1], rs[i], rs[i + 1]); }
+function edge(ctx, pal) { ctx.lineJoin = "round"; ctx.lineWidth = 5; ctx.strokeStyle = pal[2]; ctx.globalAlpha = 0.5; ctx.stroke(); ctx.globalAlpha = 1; }
+function chain(ctx, pts, rs, pal, withEdge = true) {   // 관절로 이어진 팔다리 한 줄
+  const path = () => chainPath(ctx, pts, rs);
+  if (withEdge) { path(); edge(ctx, pal); }
+  path(); ctx.fillStyle = pal[1]; ctx.fill();
+  ctx.save(); path(); ctx.clip();
+  // 빛(왼쪽 위) 쪽은 밝게, 반대쪽은 어둡게: 관절을 지나는 꺾은선을 옆으로 밀어 여러 겹 긋는다
+  const L = [-0.6, -0.8];
+  const off = (k) => {
+    ctx.beginPath();
+    pts.forEach((p, i) => {
+      const a = pts[Math.min(i + 1, pts.length - 1)], b = pts[Math.max(i - 1, 0)];
+      let n = [-(a[1] - b[1]), a[0] - b[0]]; const l = Math.hypot(n[0], n[1]) || 1; n = [n[0] / l, n[1] / l];
+      if (n[0] * L[0] + n[1] * L[1] < 0) n = [-n[0], -n[1]];
+      const x = p[0] + n[0] * rs[i] * k, y = p[1] + n[1] * rs[i] * k;
+      i ? ctx.lineTo(x, y) : ctx.moveTo(x, y);
+    });
+  };
+  ctx.lineCap = "round"; ctx.lineJoin = "round";
+  const R = rs.reduce((x, y) => x + y) / rs.length;
+  for (let k = 0; k < 7; k++) { off(-1.05); ctx.strokeStyle = pal[2]; ctx.globalAlpha = 0.14; ctx.lineWidth = R * (1.3 - k * 0.14); ctx.stroke(); }
+  for (let k = 0; k < 7; k++) { off(0.4); ctx.strokeStyle = pal[0]; ctx.globalAlpha = 0.13; ctx.lineWidth = R * (0.85 - k * 0.1); ctx.stroke(); }
+  ctx.restore(); ctx.globalAlpha = 1;
+}
+
 function drawTorso(ctx) {
-  ctx.beginPath(); pathOf(ctx, TORSO);
-  const g = ctx.createRadialGradient(250, 640, 20, 300, 720, 290);
+  const g = ctx.createRadialGradient(240, 630, 20, 300, 700, 300);
   g.addColorStop(0, PAL.blue[0]); g.addColorStop(0.5, PAL.blue[1]); g.addColorStop(1, PAL.blue[2]);
-  ctx.fillStyle = g; ctx.fill(); ctx.lineWidth = 2.5; ctx.strokeStyle = PAL.blue[2]; ctx.globalAlpha = 0.5; ctx.stroke(); ctx.globalAlpha = 1;
-  ctx.save(); ctx.beginPath(); pathOf(ctx, TORSO); ctx.clip();
-  ctx.fillStyle = "rgba(255,255,255,0.12)"; ctx.beginPath(); ctx.ellipse(245, 660, 60, 90, 0.2, 0, 7); ctx.fill();
-  ctx.fillStyle = "rgba(0,20,70,0.25)"; ctx.beginPath(); ctx.ellipse(315, 900, 200, 60, 0, 0, 7); ctx.fill();
+  shape(ctx, "torso2"); ctx.fillStyle = g; ctx.fill();
+  ctx.save(); shape(ctx, "torso2"); ctx.clip();
+  ctx.fillStyle = "rgba(255,255,255,0.13)"; ctx.beginPath(); ctx.ellipse(215, 640, 55, 80, 0.3, 0, 7); ctx.fill();
+  ctx.fillStyle = "rgba(0,20,70,0.3)"; ctx.beginPath(); ctx.ellipse(310, 850, 210, 70, 0, 0, 7); ctx.fill();
   ctx.restore();
 }
 
-// pose: x, y, s, rot, torso, head, lh, rh (손목 목표), lf, rf (발목 목표) - 모두 원본 그림 좌표, lb, rb, lkb, rkb (굽는 방향),
+// pose (각도는 라디안): x, y, s, rot, torso, head, aL=[어깨, 팔꿈치], aR, lL=[엉덩이, 무릎], lR, gL, gR (손목 꺾임),
 //       cape {rot, wave, speed, stretch}, face {mouth, eyes, blink, look, brow}, prop: "spray" | "hand" | "none", lBack, rBack
+const BASE = { rot: 0, torso: 0, head: 0, aL: [-0.78, 2.22], aR: [0.29, -1.57], lL: [-0.44, -0.44], lR: [0.87, 0.87], gL: 0.52, gR: 0.23, extAng: 0 };
+function skeleton(P) {
+  const up = p => rot2(p, P.torso, SK.pelvis);
+  const shL = up(SK.shL), shR = up(SK.shR);
+  const elL = step(shL, P.aL[0] - P.torso, SK.upper[0]), wrL = step(elL, P.aL[1] - P.torso, SK.fore[0]);
+  const elR = step(shR, P.aR[0] - P.torso, SK.upper[1]), wrR = step(elR, P.aR[1] - P.torso, SK.fore[1]);
+  const knL = step(SK.hipL, P.lL[0], SK.thigh[0]), anL = step(knL, P.lL[1], SK.shin[0]);
+  const knR = step(SK.hipR, P.lR[0], SK.thigh[1]), anR = step(knR, P.lR[1], SK.shin[1]);
+  return { shL, shR, elL, wrL, elR, wrR, knL, anL, knR, anR, neck: up(SK.neck) };
+}
+function fistAngle(P, side) {   // 주먹 방향: 팔뚝 방향 + 손목 꺾임 (화면 각도, 0 = 오른쪽)
+  const a = side === "L" ? P.aL[1] : P.aR[1];
+  return Math.PI / 2 - (a - P.torso) + (side === "L" ? P.gL : P.gR) + P.torso;
+}
 function drawChar(ctx, pose, t) {
-  const P = Object.assign({ s: 1, rot: 0, torso: 0, head: 0, lb: 1, rb: -1, lkb: 1, rkb: -1, prop: "spray" }, pose);
-  ctx.save(); ctx.translate(P.x, P.y); ctx.rotate(P.rot); ctx.scale(P.s * (P.sx || 1), P.s * (P.sy || 1)); ctx.translate(-J.pelvis[0], -J.pelvis[1]);
-  const up = p => rot2(p, P.torso, J.pelvis);
-  const shL = up(J.shL), shR = up(J.shR), neck = up(J.neck);
-  const [kL, aL] = ik(J.hipL, P.lf || J.ankleL, LIMB.thigh, LIMB.shin, P.lkb);
-  const [kR, aR] = ik(J.hipR, P.rf || J.ankleR, LIMB.thigh, LIMB.shin, P.rkb);
-  const [eL, hL] = ik(shL, P.lh || J.handL, LIMB.upper, LIMB.fore, P.lb);
-  const [eR, hR] = ik(shR, P.rh || J.handR, LIMB.upper, LIMB.fore, P.rb);
-  const bodyRot = fn => { ctx.save(); ctx.translate(J.pelvis[0], J.pelvis[1]); ctx.rotate(P.torso); ctx.translate(-J.pelvis[0], -J.pelvis[1]); fn(); ctx.restore(); };
-  const foreL = angOf(eL, hL), foreR = angOf(eR, hR);
-  const arm = (sh, e, h) => limb(ctx, sh, e, h, 50, 42, PAL.blue);
-  const fistL = () => { if (P.prop === "spray") attached(ctx, J.handL, hL, foreL - angOf(...ik(J.shL, J.handL, LIMB.upper, LIMB.fore, 1)), () => drawNozzle(ctx)); drawFist(ctx, hL, foreL, 1.1); };
-  const fistR = () => drawFist(ctx, hR, foreR, 1.1);
+  const P = Object.assign({ s: 1, prop: "spray" }, BASE, pose);
+  ctx.save(); ctx.translate(P.x, P.y); ctx.rotate(P.rot); ctx.scale(P.s * (P.sx || 1), P.s * (P.sy || 1)); ctx.translate(-SK.pelvis[0], -SK.pelvis[1]);
+  const K = skeleton(P);
+  const bodyRot = fn => { ctx.save(); ctx.translate(SK.pelvis[0], SK.pelvis[1]); ctx.rotate(P.torso); ctx.translate(-SK.pelvis[0], -SK.pelvis[1]); fn(); ctx.restore(); };
+  const fL = fistAngle(P, "L"), fR = fistAngle(P, "R"), fL0 = fistAngle(BASE, "L");
+  const armL = () => chain(ctx, [K.shL, K.elL, K.wrL], SK.rArm, PAL.blue);
+  const armR = () => chain(ctx, [K.shR, K.elR, K.wrR], SK.rArm, PAL.blue);
+  const fistL = () => {
+    if (P.prop === "spray") attached(ctx, BASE_W.L, K.wrL, fL - fL0, () => drawNozzle(ctx));
+    drawFist(ctx, K.wrL, fL, 0.95);
+  };
+  const fistR = () => drawFist(ctx, K.wrR, fR, 0.95);
+  const boot = (side, kn, an) => {
+    const shin = Math.atan2(an[1] - kn[1], an[0] - kn[0]);
+    const base = side === "L" ? Math.atan2(BASE_K.anL[1] - BASE_K.knL[1], BASE_K.anL[0] - BASE_K.knL[0]) : Math.atan2(BASE_K.anR[1] - BASE_K.knR[1], BASE_K.anR[0] - BASE_K.knR[0]);
+    attached(ctx, side === "L" ? BOOT_ANCHOR.L : BOOT_ANCHOR.R, an, (shin - base) * 0.6, () => drawBoot(ctx, side));
+  };
 
   bodyRot(() => drawCape(ctx, P, t));
-  const boot = (side, k, a, orig) => attached(ctx, side === "L" ? J.ankleL : J.ankleR, a, (angOf(k, a) - orig) * 0.45, () => drawBoot(ctx, side));
-  limb(ctx, J.hipR, kR, aR, 62, 54, PAL.blue); boot("R", kR, aR, ORIG.shinR);
-  limb(ctx, J.hipL, kL, aL, 62, 54, PAL.blue); boot("L", kL, aL, ORIG.shinL);
-  if (P.rBack) { arm(shR, eR, hR); fistR(); }
-  if (P.lBack) { arm(shL, eL, hL); fistL(); }
+  if (P.rBack) { armR(); fistR(); }
+  if (P.lBack) { armL(); fistL(); }
+  // 몸통과 두 다리는 한 덩어리: 테두리를 먼저 다 긋고, 그 위를 칠해서 이음새 선이 안 생기게
+  const legR = [SK.hipR, K.knR, K.anR], legL = [SK.hipL, K.knL, K.anL];
+  bodyRot(() => { shape(ctx, "torso2"); edge(ctx, PAL.blue); });
+  chainPath(ctx, legR, SK.rLeg); edge(ctx, PAL.blue); chainPath(ctx, legL, SK.rLeg); edge(ctx, PAL.blue);
   bodyRot(() => drawTorso(ctx));
-  if (!P.lBack) ball(ctx, shL, 52, PAL.blue);
-  if (!P.rBack) ball(ctx, shR, 52, PAL.blue);
-  attached(ctx, J.neck, neck, P.torso + P.head, () => drawHead(ctx, P));
-  if (!P.lBack) arm(shL, eL, hL);
-  if (!P.rBack) arm(shR, eR, hR);
+  chain(ctx, legR, SK.rLeg, PAL.blue, false); chain(ctx, legL, SK.rLeg, PAL.blue, false);
+  boot("R", K.knR, K.anR); boot("L", K.knL, K.anL);
+  attached(ctx, J.neck, K.neck, P.torso + P.head, () => drawHead(ctx, P));
+  if (!P.lBack) armL();
+  if (!P.rBack) armR();
   if (P.prop === "spray") {
-    const valve = [hR[0] - 150, hR[1] - 8];
-    attached(ctx, J.valve, valve, P.extAng || 0, () => drawExtinguisher(ctx));
-    const nb = rot2([150, 660], foreL - angOf(...ik(J.shL, J.handL, LIMB.upper, LIMB.fore, 1)), J.handL); nb[0] += hL[0] - J.handL[0]; nb[1] += hL[1] - J.handL[1];
+    const valve = [K.wrR[0] - 150, K.wrR[1] - 12];
+    attached(ctx, J.valve, valve, P.extAng, () => drawExtinguisher(ctx));
+    const nb = rot2([150, 660], fL - fL0, BASE_W.L); nb[0] += K.wrL[0] - BASE_W.L[0]; nb[1] += K.wrL[1] - BASE_W.L[1];
     ctx.strokeStyle = "#16161a"; ctx.lineWidth = 16; ctx.lineCap = "round";   // 호스
     ctx.beginPath(); ctx.moveTo(valve[0] + 62, valve[1] + 70); ctx.bezierCurveTo(valve[0] + 170, valve[1] + 150, valve[0] + 160, valve[1] - 10, valve[0] + 50, valve[1] - 34); ctx.stroke();
     ctx.beginPath(); ctx.moveTo(valve[0] - 10, valve[1] - 20); ctx.quadraticCurveTo((valve[0] + nb[0]) / 2, Math.min(valve[1], nb[1]) - 40, nb[0], nb[1]); ctx.stroke();
   } else if (P.prop === "hand") {
-    attached(ctx, [288, 640], [hR[0] + Math.cos(foreR) * 50, hR[1] + Math.sin(foreR) * 50 + 10], P.extAng || 0, () => drawExtinguisher(ctx));
+    const d = [Math.cos(fR), Math.sin(fR)];
+    attached(ctx, [288, 640], [K.wrR[0] + d[0] * 62, K.wrR[1] + d[1] * 62 + 12], P.extAng, () => drawExtinguisher(ctx));
   }
   if (!P.rBack) fistR();
   if (!P.lBack) fistL();
   ctx.restore();
-  return { hL, hR };
+  return K;
 }
+const BASE_K = skeleton(BASE), BASE_W = { L: BASE_K.wrL, R: BASE_K.wrR };
+const BOOT_ANCHOR = { L: [150, 925], R: [522, 888] };
 
-const POSES = {
+const POSES = {   // 각도: 0 = 아래, π = 위, +는 화면 오른쪽. [윗부분, 아랫부분]
   spray: { face: { mouth: "open" } },
-  stand: { lh: [120, 790], rh: [510, 790], lb: 1, rb: -1, lf: [235, 1000], rf: [395, 1000], prop: "hand", cape: { rot: 0.5, wave: 8, speed: 3 }, face: { mouth: "smile" } },
-  run: { torso: 0.1, lh: [110, 720], rh: [540, 640], lb: 1, rb: -1, lf: [150, 960], rf: [470, 1010], prop: "none", cape: { rot: -0.05, wave: 18, speed: 10, stretch: 1.1 }, face: { mouth: "open", brow: 1 } },
-  flyUp: { rot: -0.25, lBack: 1, lh: [70, 470], rh: [540, 770], lb: 1, rb: -1, lf: [290, 1020], rf: [360, 1030], lkb: 1, rkb: -1, prop: "hand", extAng: 0.3, cape: { rot: 0.9, wave: 26, speed: 12, stretch: 1.2 }, face: { mouth: "grit", brow: 1 } },
-  lift: { lBack: 1, rBack: 1, head: -0.06, lh: [70, 470], rh: [560, 470], lb: -1, rb: 1, lf: [175, 990], rf: [455, 990], prop: "none", cape: { rot: 0.4, wave: 12, speed: 5 }, face: { mouth: "open", look: [0, -1] } },
-  throwDown: { torso: 0.15, head: 0.1, lh: [60, 760], rh: [580, 760], lb: -1, rb: 1, lf: [155, 960], rf: [495, 950], prop: "none", cape: { rot: -0.8, wave: 22, speed: 10 }, face: { mouth: "grit", brow: 1 } },
-  cheer: { lBack: 1, lh: [60, 470], rh: [520, 790], lb: -1, rb: -1, lf: [235, 1000], rf: [400, 1000], prop: "hand", cape: { rot: 0.3, wave: 12, speed: 5 }, face: { mouth: "open", eyes: "happy" } },
+  stand: { aL: [-0.22, -0.08], aR: [0.22, 0.08], gL: 0, gR: 0, lL: [-0.1, -0.04], lR: [0.1, 0.04], prop: "hand", cape: { rot: 0.5, wave: 8, speed: 3 }, face: { mouth: "smile" } },
+  run: { torso: 0.08, aL: [-0.45, -2.5], aR: [0.35, 0.15], gL: 0, gR: 0, lL: [-0.2, -0.1], lR: [1.2, 0.25], prop: "none", cape: { rot: -0.05, wave: 18, speed: 10, stretch: 1.1 }, face: { mouth: "open", brow: 1 } },
+  flyUp: { rot: -0.15, aL: [-2.55, -2.9], aR: [0.25, 0.1], gL: 0, gR: 0, lL: [0.12, 0.3], lR: [-0.12, -0.3], prop: "hand", extAng: 0.2, cape: { rot: 0.9, wave: 26, speed: 12, stretch: 1.2 }, face: { mouth: "grit", brow: 1 } },
+  lift: { head: -0.06, aL: [-2.25, -2.75], aR: [2.25, 2.75], gL: 0, gR: 0, lL: [-0.25, -0.1], lR: [0.25, 0.1], prop: "none", cape: { rot: 0.4, wave: 12, speed: 5 }, face: { mouth: "open", look: [0, -1] } },
+  throwDown: { torso: 0.12, head: 0.1, aL: [-1.1, -0.7], aR: [1.1, 0.7], gL: 0, gR: 0, lL: [-0.35, -0.1], lR: [0.6, 0.2], prop: "none", cape: { rot: -0.8, wave: 22, speed: 10 }, face: { mouth: "grit", brow: 1 } },
+  cheer: { aL: [-0.9, 0.7], aR: [2.3, 2.75], gL: 0.3, gR: 0, lL: [-0.12, -0.04], lR: [0.12, 0.04], prop: "none", cape: { rot: 0.3, wave: 12, speed: 5 }, face: { mouth: "open", eyes: "happy" } },
 };
 
-// 두 포즈 사이를 k(0~1)만큼 섞는다. 숫자와 좌표는 선형으로, 나머지(표정, 소품)는 가까운 쪽을 따른다.
+// 두 포즈 사이를 k(0~1)만큼 섞는다. 각도와 숫자는 선형으로, 나머지(표정, 소품)는 가까운 쪽을 따른다.
 function lerpPose(a, b, k) {
-  const base = { rot: 0, torso: 0, head: 0, lh: J.handL, rh: J.handR, lf: J.ankleL, rf: J.ankleR, lb: 1, rb: -1, lkb: 1, rkb: -1, extAng: 0 };
-  const A = Object.assign({}, base, a), B = Object.assign({}, base, b), out = Object.assign({}, k < 0.5 ? A : B);
-  for (const key of ["rot", "torso", "head", "extAng"]) out[key] = A[key] + (B[key] - A[key]) * k;
-  for (const key of ["lh", "rh", "lf", "rf"]) out[key] = [A[key][0] + (B[key][0] - A[key][0]) * k, A[key][1] + (B[key][1] - A[key][1]) * k];
+  const A = Object.assign({}, BASE, a), B = Object.assign({}, BASE, b), out = Object.assign({}, k < 0.5 ? A : B);
+  for (const key of ["rot", "torso", "head", "extAng", "gL", "gR"]) out[key] = A[key] + (B[key] - A[key]) * k;
+  for (const key of ["aL", "aR", "lL", "lR"]) out[key] = [A[key][0] + (B[key][0] - A[key][0]) * k, A[key][1] + (B[key][1] - A[key][1]) * k];
   const ca = Object.assign({ rot: 0, wave: 10, speed: 5, stretch: 1 }, A.cape), cb = Object.assign({ rot: 0, wave: 10, speed: 5, stretch: 1 }, B.cape);
   out.cape = {}; for (const key in ca) out.cape[key] = ca[key] + (cb[key] - ca[key]) * k;
   return out;
