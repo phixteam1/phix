@@ -1,0 +1,137 @@
+<!doctype html>
+<html lang="ko">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>PDF 정리함</title>
+<style>
+/*CSS*/
+</style>
+</head>
+<body>
+<header id="bar">
+  <div class="brand">PDF 정리함</div>
+  <div class="group">
+    <button id="bOpen" class="tb primary" title="파일 열기 (Ctrl+O)"><i data-i="open"></i><span>열기</span></button>
+    <div class="dd">
+      <button class="tb" data-dd="ddInsert" title="삽입"><i data-i="insert"></i><span>삽입</span><i data-i="caret" class="caret"></i></button>
+      <div class="menu" id="ddInsert">
+        <button id="mInsFile">PDF·이미지 파일 삽입…</button>
+        <button id="mInsBlank">빈 페이지 삽입</button>
+        <button id="mInsDup">선택 페이지 복제 <kbd>Ctrl+D</kbd></button>
+        <div class="hint">선택한 페이지 뒤에 들어가. 선택이 없으면 맨 끝.</div>
+      </div>
+    </div>
+  </div>
+  <div class="group">
+    <button id="bUndo" class="tb ic" title="되돌리기 (Ctrl+Z)"><i data-i="undo"></i></button>
+    <button id="bRedo" class="tb ic" title="다시 실행 (Ctrl+Y)"><i data-i="redo"></i></button>
+  </div>
+  <div class="group">
+    <button id="bRotL" class="tb" title="왼쪽으로 90° (L)"><i data-i="rotl"></i><span>왼쪽</span></button>
+    <button id="bRotR" class="tb" title="오른쪽으로 90° (R)"><i data-i="rotr"></i><span>오른쪽</span></button>
+    <button id="bDel" class="tb" title="선택 페이지 삭제 (Delete)"><i data-i="trash"></i><span>삭제</span></button>
+  </div>
+  <div class="group">
+    <button id="bExtract" class="tb" title="선택 페이지만 새 PDF로 저장"><i data-i="extract"></i><span>추출</span></button>
+    <button id="bSplit" class="tb" title="여러 파일로 나누기"><i data-i="split"></i><span>분할</span></button>
+  </div>
+  <div class="group">
+    <button id="bNum" class="tb" title="페이지 번호 넣기"><i data-i="num"></i><span>쪽번호</span></button>
+    <button id="bWm" class="tb" title="워터마크 넣기"><i data-i="wm"></i><span>워터마크</span></button>
+    <button id="bFit" class="tb" title="페이지 크기 맞추기"><i data-i="size"></i><span>크기</span></button>
+  </div>
+  <div class="spacer"></div>
+  <div class="group save">
+    <input id="fname" type="text" placeholder="저장할 파일 이름" spellcheck="false">
+    <span class="ext">.pdf</span>
+    <button id="bSave" class="tb primary" title="저장 (Ctrl+S)"><i data-i="save"></i><span>저장</span></button>
+    <button id="bTab" class="tb ic" title="새 탭에서 열기 (인쇄용)"><i data-i="print"></i></button>
+  </div>
+</header>
+
+<div id="sub">
+  <div class="selbox">
+    <span>선택</span>
+    <input id="selInput" type="text" placeholder="예: 1-3, 7" title="쪽 범위를 입력하고 Enter" spellcheck="false">
+    <button class="chip" id="sAll">전체</button>
+    <button class="chip" id="sOdd">홀수</button>
+    <button class="chip" id="sEven">짝수</button>
+    <button class="chip" id="sInv">반전</button>
+    <button class="chip" id="sNone">해제</button>
+    <button class="chip" id="sRev" title="선택한 페이지(없으면 전체)의 순서를 거꾸로">순서 뒤집기</button>
+  </div>
+  <div class="spacer"></div>
+  <div id="badges"></div>
+  <label class="zoom" title="썸네일 크기"><i data-i="zoomout"></i><input id="zoom" type="range" min="90" max="340" step="10" value="180"><i data-i="zoomin"></i></label>
+</div>
+
+<main id="main">
+  <aside id="side">
+    <div class="side-h">열린 파일</div>
+    <div id="srcList"></div>
+    <div class="side-help">
+      <b>사용법</b>
+      <div>클릭: 선택 · Ctrl+클릭: 추가 선택</div>
+      <div>Shift+클릭: 범위 선택</div>
+      <div>끌어서 순서 바꾸기</div>
+      <div>더블클릭: 크게 보기</div>
+      <div>파일을 끌어다 놓으면 그 자리에 삽입</div>
+      <div>Del 삭제 · L/R 회전</div>
+      <div>Ctrl+Z 되돌리기 · Ctrl+S 저장</div>
+      <div class="note">파일은 이 컴퓨터 밖으로 나가지 않아. 인터넷 없이도 돼.</div>
+    </div>
+  </aside>
+  <section id="gridWrap">
+    <div id="empty">
+      <div class="drop">
+        <div class="big"><i data-i="open"></i></div>
+        <div class="t1">PDF나 이미지를 여기로 끌어다 놓기</div>
+        <div class="t2">여러 개를 한 번에 넣으면 이름순으로 합쳐져</div>
+        <button id="bOpen2" class="tb primary">파일 열기</button>
+      </div>
+    </div>
+    <div id="grid"></div>
+    <div id="marker"></div>
+  </section>
+</main>
+
+<footer id="status"><span id="stTotal"></span><span id="stSel"></span><span class="spacer"></span><span id="stMsg"></span></footer>
+
+<input id="fileIn" type="file" multiple accept="application/pdf,.pdf,image/*" hidden>
+<input id="fileIns" type="file" multiple accept="application/pdf,.pdf,image/*" hidden>
+
+<div id="modal" class="modal" hidden><div class="dlg"><div class="dlg-h"><span id="dlgTitle"></span><button class="x" data-close>×</button></div><div class="dlg-b" id="dlgBody"></div><div class="dlg-f" id="dlgFoot"></div></div></div>
+
+<div id="viewer" class="viewer" hidden>
+  <div class="v-bar">
+    <button class="tb ic" id="vPrev" title="이전 (←)"><i data-i="left"></i></button>
+    <span id="vInfo"></span>
+    <button class="tb ic" id="vNext" title="다음 (→)"><i data-i="right"></i></button>
+    <span class="sep"></span>
+    <button class="tb ic" id="vOut" title="축소 (-)"><i data-i="zoomout"></i></button>
+    <span id="vZoom">100%</span>
+    <button class="tb ic" id="vIn" title="확대 (+)"><i data-i="zoomin"></i></button>
+    <button class="tb" id="vFit" title="화면에 맞추기 (0)">맞춤</button>
+    <span class="sep"></span>
+    <button class="tb ic" id="vRotL" title="왼쪽 회전"><i data-i="rotl"></i></button>
+    <button class="tb ic" id="vRotR" title="오른쪽 회전"><i data-i="rotr"></i></button>
+    <button class="tb ic" id="vDel" title="이 페이지 삭제"><i data-i="trash"></i></button>
+    <span class="spacer"></span>
+    <button class="tb ic" id="vClose" title="닫기 (Esc)"><i data-i="close"></i></button>
+  </div>
+  <div class="v-body" id="vBody"><canvas id="vCanvas"></canvas></div>
+</div>
+
+<div id="busy" hidden><div class="bx"><div class="spin"></div><div id="busyMsg">처리 중…</div></div></div>
+<div id="toast"></div>
+
+<script type="text/plain" id="pdfjs-worker">/*PDFJS_WORKER*/</script>
+<script type="text/plain" id="cmaps">/*CMAPS*/</script>
+<script>/*PDFJS*/</script>
+<script>/*PDFLIB*/</script>
+<script>
+/*APP*/
+</script>
+</body>
+</html>
