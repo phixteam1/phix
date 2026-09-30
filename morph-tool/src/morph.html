@@ -507,6 +507,11 @@ function renderList() {
   $("make").disabled = items.length < 2 || busy;
 }
 
+// blob: 주소는 claude.ai 안에서 막혀 있어서 data: 주소로 읽는다
+function dataUrl(blob) {
+  return new Promise((ok, bad) => { const r = new FileReader(); r.onload = () => ok(r.result); r.onerror = () => bad(r.error); r.readAsDataURL(blob); });
+}
+
 function loadImage(url) {
   return new Promise((ok, bad) => { const im = new Image(); im.onload = () => ok(im); im.onerror = bad; im.src = url; });
 }
@@ -519,7 +524,7 @@ async function addFiles(files) {
   if (sampleMode) { items = []; sampleMode = false; $("sampleNote").hidden = true; }
   for (const f of imgs) {
     try {
-      const im = await loadImage(URL.createObjectURL(f));
+      const im = await loadImage(await dataUrl(f));
       items.push({ name: f.name, src: im, bg: borderColor(im) });
     } catch { $("status").textContent = `${f.name}은 이 브라우저에서 열 수 없는 형식이야. PNG나 JPG로 바꿔서 넣어줘.`; }
   }
@@ -610,7 +615,7 @@ async function makeVideo() {
       ext = mime.includes("mp4") ? "mp4" : "webm"; blob = new Blob(parts, { type: mime.split(";")[0] });
     }
     bar.style.width = "100%";
-    const url = URL.createObjectURL(blob);
+    const url = window.claude ? await dataUrl(blob) : URL.createObjectURL(blob);
     const v = document.createElement("video"); v.src = url; v.controls = true; v.loop = true; v.muted = true; v.playsInline = true; v.autoplay = true;
     const a = document.createElement("a"); a.href = url; a.download = `morph.${ext}`; a.className = "btn primary"; a.textContent = `morph.${ext} 저장 (${(blob.size / 1048576).toFixed(1)}MB)`;
     a.style.justifySelf = "start"; a.style.textDecoration = "none";
