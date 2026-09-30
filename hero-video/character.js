@@ -1,251 +1,297 @@
-// 소화기 히어로를 도형으로 그린다. 부위(머리, 몸, 팔, 다리, 망토, 소화기)가 나뉘어 있어 포즈를 자유롭게 줄 수 있다.
-// drawChar(ctx, pose, t): pose의 좌표는 골반 기준(원본 그림 픽셀 단위, 키 약 900), 손발은 목표 위치를 주면 관절이 알아서 굽는다.
-const CH = {
-  hood: ["#9a5cf0", "#6a2fc4", "#43188c"], helmet: ["#ff6a48", "#e8281c", "#a8140e"], band: "#7b3ad6",
-  emblem: ["#ffae3a", "#ff7a1e"], stripe: "#ffb52a", face: ["#fffaf2", "#ffe9d6"], hair: "#121014",
-  cheek: "rgba(245,120,125,0.55)", mouth: "#e2302a", tongue: "#ff8c8c",
-  suit: ["#5b90f2", "#2f5fd0", "#1d3c9c"], red: ["#ff6a4c", "#e8251a", "#a3120c"], cape: ["#ffd84a", "#ffb81a", "#e89400"],
-  metal: ["#ffe27a", "#e0a800"], black: ["#4a4a52", "#16161a"],
+// 소화기 히어로를 벡터로 그린다. 머리, 장갑, 장화, 소화기, 망토 모양은 원본 그림에서 딴 윤곽선(parts.js)을 쓰고,
+// 팔다리는 관절 위치로 그때그때 만든다. 좌표는 원본 그림(756x1033) 픽셀 단위.
+// drawChar(ctx, pose, t): pose.x, pose.y는 골반(J.pelvis)이 놓일 화면 위치.
+const PAL = {
+  purple: ["#a36ae0", "#6c35ad", "#3a1068"], blue: ["#4a86ea", "#1f58c4", "#0a2c78"], red: ["#ff7058", "#f0220c", "#a00400"],
+  yellow: ["#ffd347", "#fbb015", "#d68502"], orange: ["#ffa24a", "#f27a18", "#b85800"], face: ["#fffaf2", "#ffeede", "#f6cdb4"],
+  hair: ["#3a3a40", "#141416", "#000"], black: ["#5a5a62", "#222226", "#050505"], gold: ["#ffe36a", "#f5b400", "#a87200"],
 };
-const SH_L = [-150, -190], SH_R = [150, -190], HIP_L = [-80, -4], HIP_R = [80, -4], NECK = [0, -245];
-const ARM = [112, 104], LEG = [94, 90];
+const J = {   // 원본 그림 속 관절 자리
+  pelvis: [315, 835], neck: [305, 560], shL: [150, 612], shR: [445, 612], hipL: [232, 815], hipR: [398, 815],
+  handL: [168, 648], handR: [388, 690], ankleL: [150, 925], ankleR: [522, 888], cape: [468, 575], valve: [288, 682],
+};
+const LIMB = { upper: 88, fore: 92, thigh: 71, shin: 69 };
 
-function ik(p0, target, l1, l2, bend) {
-  let dx = target[0] - p0[0], dy = target[1] - p0[1], d = Math.hypot(dx, dy);
-  const dmax = l1 + l2 - 0.5, dmin = Math.abs(l1 - l2) + 1;
-  const dd = Math.max(dmin, Math.min(dmax, d));
-  if (d < 1e-6) { dx = 0; dy = 1; d = 1; }
-  const ux = dx / d, uy = dy / d;
-  const a = (l1 * l1 + dd * dd - l2 * l2) / (2 * dd), h = Math.sqrt(Math.max(0, l1 * l1 - a * a));
-  const elbow = [p0[0] + ux * a - uy * h * bend, p0[1] + uy * a + ux * h * bend];
-  const end = [p0[0] + ux * dd, p0[1] + uy * dd];
-  return [elbow, end];
-}
-const rot2 = (p, a) => [p[0] * Math.cos(a) - p[1] * Math.sin(a), p[0] * Math.sin(a) + p[1] * Math.cos(a)];
-
-function radial(ctx, x, y, r, cols, hx = -0.35, hy = -0.4) {
-  const g = ctx.createRadialGradient(x + r * hx, y + r * hy, r * 0.05, x, y, r * 1.1);
-  g.addColorStop(0, cols[0]); g.addColorStop(0.55, cols[1]); g.addColorStop(1, cols[2] || cols[1]);
-  return g;
-}
-
-function limb(ctx, a, b, c, w, cols) {   // 통통한 팔다리: 어두운 테두리, 본색, 밝은 하이라이트 순으로 겹쳐 긋는다
-  ctx.lineCap = "round"; ctx.lineJoin = "round";
-  const path = () => { ctx.beginPath(); ctx.moveTo(a[0], a[1]); ctx.quadraticCurveTo(b[0], b[1], (b[0] + c[0]) / 2, (b[1] + c[1]) / 2); ctx.lineTo(c[0], c[1]); };
-  ctx.strokeStyle = cols[2]; ctx.lineWidth = w + 8; path(); ctx.stroke();
-  ctx.strokeStyle = cols[1]; ctx.lineWidth = w; path(); ctx.stroke();
-  ctx.save(); ctx.translate(-w * 0.14, -w * 0.16);
-  ctx.strokeStyle = cols[0]; ctx.globalAlpha = 0.55; ctx.lineWidth = w * 0.32; path(); ctx.stroke();
-  ctx.restore();
-}
-
-function glove(ctx, p, r, ang) {
-  ctx.save(); ctx.translate(p[0], p[1]); ctx.rotate(ang);
-  ctx.fillStyle = CH.red[2]; ctx.beginPath(); ctx.arc(0, 0, r + 4, 0, 7); ctx.fill();
-  ctx.fillStyle = radial(ctx, 0, 0, r, CH.red); ctx.beginPath(); ctx.arc(0, 0, r, 0, 7); ctx.fill();
-  ctx.strokeStyle = "rgba(120,10,6,0.45)"; ctx.lineWidth = 4; ctx.lineCap = "round";
-  for (let k = -1; k <= 1; k++) { ctx.beginPath(); ctx.moveTo(r * 0.15, k * r * 0.32); ctx.lineTo(r * 0.75, k * r * 0.3); ctx.stroke(); }
-  ctx.fillStyle = radial(ctx, -r * 0.35, -r * 0.7, r * 0.42, CH.red);
-  ctx.beginPath(); ctx.ellipse(-r * 0.3, -r * 0.72, r * 0.42, r * 0.3, -0.5, 0, 7); ctx.fill();
-  ctx.restore();
-}
-
-function boot(ctx, knee, foot, dir) {
-  const ang = Math.atan2(foot[1] - knee[1], foot[0] - knee[0]) - Math.PI / 2;
-  ctx.save(); ctx.translate(foot[0], foot[1]); ctx.rotate(ang);
-  ctx.fillStyle = CH.red[2];
-  ctx.beginPath(); ctx.roundRect(-56, -62, 112, 90, 26); ctx.fill();
-  ctx.beginPath(); ctx.ellipse(dir * 34, 26, 86, 50, 0, 0, 7); ctx.fill();
-  ctx.fillStyle = radial(ctx, 0, -20, 60, CH.red); ctx.beginPath(); ctx.roundRect(-52, -58, 104, 84, 24); ctx.fill();
-  ctx.fillStyle = radial(ctx, dir * 30, 20, 84, CH.red); ctx.beginPath(); ctx.ellipse(dir * 34, 24, 82, 46, 0, 0, 7); ctx.fill();
-  ctx.fillStyle = "rgba(255,255,255,0.28)"; ctx.beginPath(); ctx.ellipse(dir * 20 - 12, 6, 34, 13, -0.2 * dir, 0, 7); ctx.fill();
-  ctx.restore();
-}
-
-function cape(ctx, pose, t) {
-  const c = pose.cape || {}, a = c.a ?? 1.25, L = c.len ?? 360, wv = c.wave ?? 14, sp = c.speed ?? 6;
-  const d = [Math.sin(a), Math.cos(a)], n = [-d[1], d[0]];
-  const tl = rot2([-90, -236], pose.torso || 0), tr = rot2([90, -236], pose.torso || 0);
-  const w = k => Math.sin(t * sp - k * 3.2) * wv * k;
-  const pt = (base, k, side) => [base[0] + d[0] * L * k + n[0] * (w(k) + side * 200 * k), base[1] + d[1] * L * k + n[1] * (w(k) + side * 200 * k)];
-  const A = [], B = [];
-  for (let i = 0; i <= 8; i++) { A.push(pt(tl, i / 8, -1)); B.push(pt(tr, i / 8, 1)); }
-  ctx.beginPath(); ctx.moveTo(A[0][0], A[0][1]);
-  for (let i = 1; i <= 8; i++) ctx.lineTo(A[i][0], A[i][1]);
-  const e1 = A[8], e2 = B[8];   // 끝단은 물결 두 번
-  const m = [(e1[0] + e2[0]) / 2 + d[0] * (-26 + 12 * Math.sin(t * sp)), (e1[1] + e2[1]) / 2 + d[1] * (-26 + 12 * Math.sin(t * sp))];
-  ctx.quadraticCurveTo(e1[0] + (m[0] - e1[0]) * 0.5 + d[0] * 40, e1[1] + (m[1] - e1[1]) * 0.5 + d[1] * 40, m[0], m[1]);
-  ctx.quadraticCurveTo(m[0] + (e2[0] - m[0]) * 0.5 + d[0] * 40, m[1] + (e2[1] - m[1]) * 0.5 + d[1] * 40, e2[0], e2[1]);
-  for (let i = 7; i >= 0; i--) ctx.lineTo(B[i][0], B[i][1]);
+function pathOf(ctx, pts) {   // 윤곽점들을 매끈한 곡선으로
+  const n = pts.length;
+  const mid = i => [(pts[i % n][0] + pts[(i + 1) % n][0]) / 2, (pts[i % n][1] + pts[(i + 1) % n][1]) / 2];
+  let m = mid(n - 1); ctx.moveTo(m[0], m[1]);
+  for (let i = 0; i < n; i++) { const q = mid(i); ctx.quadraticCurveTo(pts[i][0], pts[i][1], q[0], q[1]); }
   ctx.closePath();
-  const g = ctx.createLinearGradient(tl[0], tl[1], tl[0] + n[0] * 200 + d[0] * L, tl[1] + n[1] * 200 + d[1] * L);
-  g.addColorStop(0, CH.cape[2]); g.addColorStop(0.4, CH.cape[1]); g.addColorStop(0.75, CH.cape[0]); g.addColorStop(1, CH.cape[1]);
-  ctx.fillStyle = g; ctx.fill();
-  ctx.strokeStyle = CH.cape[2]; ctx.lineWidth = 5; ctx.stroke();
-  ctx.strokeStyle = "rgba(200,120,0,0.35)"; ctx.lineWidth = 6; ctx.lineCap = "round";   // 주름
-  for (const s of [-0.35, 0.3]) {
-    ctx.beginPath();
-    for (let i = 2; i <= 7; i++) { const k = i / 8, p = pt([(tl[0] + tr[0]) / 2, (tl[1] + tr[1]) / 2], k, s); i === 2 ? ctx.moveTo(p[0], p[1]) : ctx.lineTo(p[0], p[1]); }
-    ctx.stroke();
-  }
 }
-
-function torso(ctx, lean) {
-  ctx.save(); ctx.rotate(lean);
-  const body = () => { ctx.beginPath(); ctx.moveTo(-120, -250); ctx.bezierCurveTo(-225, -245, -200, -100, -150, 10); ctx.quadraticCurveTo(0, 66, 150, 10); ctx.bezierCurveTo(200, -100, 225, -245, 120, -250); ctx.closePath(); };
-  ctx.fillStyle = CH.suit[2]; ctx.save(); ctx.scale(1.03, 1.02); body(); ctx.fill(); ctx.restore();
-  ctx.fillStyle = radial(ctx, -10, -130, 220, CH.suit, -0.3, -0.3); body(); ctx.fill();
-  ctx.fillStyle = "rgba(255,255,255,0.14)"; ctx.beginPath(); ctx.ellipse(-70, -160, 40, 70, 0.2, 0, 7); ctx.fill();
-  ctx.restore();
+const MULTI = new Set(["extRing", "extLever", "band", "glintL", "glintR"]);   // 여러 조각(구멍 포함)으로 된 부위
+function shape(ctx, name, only) {
+  ctx.beginPath();
+  const ps = PARTS[name].paths;
+  (only != null ? [ps[only]] : MULTI.has(name) ? ps : ps.slice(0, 1)).forEach(p => pathOf(ctx, p));
 }
-
-function head(ctx, pose, t) {
-  const f = pose.face || {};
-  // 후드
-  ctx.fillStyle = CH.hood[2]; ctx.beginPath(); ctx.ellipse(0, 4, 274, 244, 0, 0, 7); ctx.fill();
-  ctx.fillStyle = radial(ctx, 0, 0, 270, CH.hood, -0.45, -0.35); ctx.beginPath(); ctx.ellipse(0, 0, 268, 238, 0, 0, 7); ctx.fill();
-  ctx.fillStyle = "rgba(255,255,255,0.22)"; ctx.beginPath(); ctx.ellipse(-205, -40, 26, 80, 0.25, 0, 7); ctx.fill();
-  // 얼굴 테두리 안쪽 그림자
-  ctx.fillStyle = "#3a137a"; ctx.beginPath(); ctx.ellipse(-12, 16, 204, 182, 0, 0, 7); ctx.fill();
-  ctx.save();
-  ctx.beginPath(); ctx.ellipse(-12, 20, 196, 174, 0, 0, 7); ctx.clip();
-  const fg = ctx.createRadialGradient(-40, 20, 20, -12, 20, 210); fg.addColorStop(0, CH.face[0]); fg.addColorStop(1, CH.face[1]);
-  ctx.fillStyle = fg; ctx.fillRect(-230, -170, 440, 380);
-  // 머리카락
-  ctx.fillStyle = CH.hair; ctx.beginPath();
-  ctx.moveTo(-240, -200); ctx.lineTo(240, -200); ctx.lineTo(240, 20);
-  ctx.quadraticCurveTo(200, -60, 60, -72);
-  ctx.quadraticCurveTo(-10, -78, -32, -48);
-  ctx.quadraticCurveTo(-60, -86, -120, -74);
-  ctx.quadraticCurveTo(-215, -50, -236, 60);
-  ctx.closePath(); ctx.fill();
-  ctx.fillStyle = "rgba(255,255,255,0.12)"; ctx.beginPath(); ctx.ellipse(-60, -130, 90, 18, -0.1, 0, 7); ctx.fill();
-  ctx.restore();
-  // 볼
-  ctx.fillStyle = CH.cheek;
-  ctx.beginPath(); ctx.ellipse(-168, 62, 40, 30, 0, 0, 7); ctx.fill();
-  ctx.beginPath(); ctx.ellipse(98, 96, 40, 30, 0, 0, 7); ctx.fill();
-  // 눈
-  const blink = f.blink || 0, look = f.look || [0, 0];
-  for (const [ex, ey] of [[-108, 16], [52, 32]]) {
-    ctx.save(); ctx.translate(ex + look[0] * 8, ey + look[1] * 6); ctx.scale(1, Math.max(0.08, 1 - blink));
-    if (f.eyes === "happy") {
-      ctx.strokeStyle = CH.hair; ctx.lineWidth = 12; ctx.lineCap = "round";
-      ctx.beginPath(); ctx.arc(0, 14, 28, Math.PI * 1.1, Math.PI * 1.9); ctx.stroke();
-    } else {
-      ctx.fillStyle = CH.hair; ctx.beginPath(); ctx.ellipse(0, 0, 31, 41, 0, 0, 7); ctx.fill();
-      ctx.fillStyle = "#fff"; ctx.beginPath(); ctx.arc(9, -14, 12, 0, 7); ctx.fill();
-      ctx.beginPath(); ctx.arc(-9, 14, 5, 0, 7); ctx.fill();
+function shade(ctx, name, pal, o = {}) {   // 윤곽 채우기: 왼쪽 위가 밝은 둥근 그라데이션 + 어두운 테두리 + 광택
+  const [x0, y0, x1, y1] = PARTS[name].bbox, w = x1 - x0, h = y1 - y0;
+  const cx = x0 + w * (o.lx ?? 0.32), cy = y0 + h * (o.ly ?? 0.28);
+  const g = ctx.createRadialGradient(cx, cy, 2, cx, cy, Math.hypot(w, h) * (o.r ?? 0.8));
+  g.addColorStop(0, pal[0]); g.addColorStop(o.mid ?? 0.45, pal[1]); g.addColorStop(1, pal[2]);
+  shape(ctx, name, o.only); ctx.fillStyle = g; ctx.fill("evenodd");
+  if (o.edge !== 0) { ctx.lineWidth = o.edge ?? 3; ctx.strokeStyle = o.edgeCol ?? pal[2]; ctx.globalAlpha = 0.7; ctx.stroke(); ctx.globalAlpha = 1; }
+  if (o.gloss) {
+    ctx.save(); shape(ctx, name, o.only); ctx.clip("evenodd");
+    for (const [gx, gy, rx, ry, a, al] of o.gloss) {
+      ctx.fillStyle = `rgba(255,255,255,${al ?? 0.45})`;
+      ctx.beginPath(); ctx.ellipse(x0 + w * gx, y0 + h * gy, w * rx, h * ry, a || 0, 0, 7); ctx.fill();
     }
     ctx.restore();
   }
-  if (f.brow) {   // 결의에 찬 눈썹
-    ctx.strokeStyle = CH.hair; ctx.lineWidth = 9; ctx.lineCap = "round";
-    ctx.beginPath(); ctx.moveTo(-140, -40); ctx.lineTo(-86, -28); ctx.stroke();
-    ctx.beginPath(); ctx.moveTo(78, -22); ctx.lineTo(28, -12); ctx.stroke();
+}
+
+// ---------- 팔다리: 관절을 지나는 곡선을 따라 두께를 줘서 매끈하게
+function ik(p0, target, l1, l2, bend) {
+  let dx = target[0] - p0[0], dy = target[1] - p0[1], d = Math.hypot(dx, dy) || 1;
+  const dd = Math.max(Math.abs(l1 - l2) + 1, Math.min(l1 + l2 - 0.5, d));
+  const ux = dx / d, uy = dy / d;
+  const a = (l1 * l1 + dd * dd - l2 * l2) / (2 * dd), h = Math.sqrt(Math.max(0, l1 * l1 - a * a));
+  return [[p0[0] + ux * a - uy * h * bend, p0[1] + uy * a + ux * h * bend], [p0[0] + ux * dd, p0[1] + uy * dd]];
+}
+const angOf = (a, b) => Math.atan2(b[1] - a[1], b[0] - a[0]);
+const ORIG = {   // 원본 포즈에서 팔뚝, 정강이 방향 (장갑, 장화 회전 기준)
+  foreL: angOf(...ik([150, 612], [168, 648], 88, 92, -1)), foreR: angOf(...ik([445, 612], [388, 690], 88, 92, 1)),
+  shinL: angOf(...ik([232, 815], [150, 925], 71, 69, 1)), shinR: angOf(...ik([398, 815], [522, 888], 71, 69, -1)),
+};
+function limb(ctx, A, E, B, rA, rB, pal) {
+  const C = [2 * E[0] - (A[0] + B[0]) / 2, 2 * E[1] - (A[1] + B[1]) / 2];
+  const N = 18, pts = [];
+  for (let i = 0; i <= N; i++) {
+    const u = i / N, v = 1 - u;
+    const p = [v * v * A[0] + 2 * u * v * C[0] + u * u * B[0], v * v * A[1] + 2 * u * v * C[1] + u * u * B[1]];
+    const tg = [2 * v * (C[0] - A[0]) + 2 * u * (B[0] - C[0]), 2 * v * (C[1] - A[1]) + 2 * u * (B[1] - C[1])];
+    const l = Math.hypot(tg[0], tg[1]) || 1;
+    const r = (rA + (rB - rA) * u) * (1 + 0.08 * Math.sin(Math.PI * u));
+    pts.push({ p, n: [-tg[1] / l, tg[0] / l], r });
   }
-  // 입
-  const mo = f.mouth || "open";
-  ctx.save(); ctx.translate(-34, 86);
-  if (mo === "o") {
-    ctx.fillStyle = CH.mouth; ctx.beginPath(); ctx.ellipse(0, 6, 20, 26, 0, 0, 7); ctx.fill();
-  } else if (mo === "smile") {
-    ctx.strokeStyle = CH.mouth; ctx.lineWidth = 9; ctx.lineCap = "round"; ctx.beginPath(); ctx.arc(0, -10, 34, 0.35, Math.PI - 0.35); ctx.stroke();
-  } else if (mo === "grit") {
-    ctx.fillStyle = CH.mouth; ctx.beginPath(); ctx.roundRect(-38, -4, 76, 30, 12); ctx.fill();
-    ctx.fillStyle = "#fff"; ctx.fillRect(-30, 0, 60, 10);
-  } else {
-    const open = f.open ?? 1;
-    ctx.fillStyle = "#8c1410"; ctx.beginPath(); ctx.moveTo(-44, -8); ctx.quadraticCurveTo(0, 8, 44, -12); ctx.quadraticCurveTo(24, 58 * open, -6, 56 * open); ctx.quadraticCurveTo(-38, 50 * open, -44, -8); ctx.fill();
-    ctx.save(); ctx.clip();
-    ctx.fillStyle = CH.tongue; ctx.beginPath(); ctx.ellipse(4, 50 * open, 32, 22, 0, 0, 7); ctx.fill();
+  const outline = () => {
+    ctx.beginPath();
+    pts.forEach((q, i) => { const x = q.p[0] + q.n[0] * q.r, y = q.p[1] + q.n[1] * q.r; i ? ctx.lineTo(x, y) : ctx.moveTo(x, y); });
+    const e = pts[N], ae = Math.atan2(e.n[1], e.n[0]);
+    ctx.arc(e.p[0], e.p[1], e.r, ae, ae - Math.PI, true);
+    for (let i = N; i >= 0; i--) { const q = pts[i]; ctx.lineTo(q.p[0] - q.n[0] * q.r, q.p[1] - q.n[1] * q.r); }
+    const s = pts[0], as = Math.atan2(-s.n[1], -s.n[0]);
+    ctx.arc(s.p[0], s.p[1], s.r, as, as - Math.PI, true);
+    ctx.closePath();
+  };
+  outline(); ctx.fillStyle = pal[1]; ctx.fill();
+  ctx.save(); outline(); ctx.clip();
+  // 빛은 왼쪽 위에서: 그쪽 가장자리는 밝게, 반대편은 어둡게 (여러 겹으로 부드럽게)
+  const mi = pts[Math.floor(N / 2)], lit = mi.n[0] * -0.6 + mi.n[1] * -0.8 >= 0 ? 1 : -1;
+  const band = (off, col, wk, al) => {
+    ctx.beginPath();
+    pts.forEach((q, i) => { const o = lit * q.r * off, x = q.p[0] + q.n[0] * o, y = q.p[1] + q.n[1] * o; i ? ctx.lineTo(x, y) : ctx.moveTo(x, y); });
+    ctx.lineCap = "round"; ctx.lineJoin = "round"; ctx.strokeStyle = col; ctx.globalAlpha = al; ctx.lineWidth = (rA + rB) / 2 * wk; ctx.stroke();
+  };
+  for (let k = 0; k < 4; k++) band(-1.0, pal[2], 1.1 - k * 0.22, 0.28);
+  for (let k = 0; k < 4; k++) band(0.35, pal[0], 0.75 - k * 0.16, 0.22);
+  ctx.restore(); ctx.globalAlpha = 1;
+  outline(); ctx.lineWidth = 3; ctx.strokeStyle = pal[2]; ctx.globalAlpha = 0.8; ctx.stroke(); ctx.globalAlpha = 1;
+}
+
+// ---------- 떼어서 돌릴 수 있는 부품
+function attached(ctx, anchor, to, ang, fn) {
+  ctx.save(); ctx.translate(to[0], to[1]); ctx.rotate(ang); ctx.translate(-anchor[0], -anchor[1]); fn(); ctx.restore();
+}
+const CREASE = {   // 손가락 사이 주름
+  L: [[[152, 626], [150, 648], [158, 668]], [[175, 622], [172, 646], [180, 668]], [[198, 626], [196, 648], [204, 670]]],
+  R: [[[334, 680], [348, 676], [362, 684]], [[332, 702], [348, 698], [364, 706]], [[336, 724], [350, 720], [364, 728]]],
+};
+function drawGlove(ctx, side) {
+  const n = side === "L" ? "gloveL" : "gloveR";
+  shade(ctx, n, PAL.red, { gloss: [[side === "L" ? 0.45 : 0.55, 0.2, 0.2, 0.1, -0.3, 0.4]] });
+  ctx.save(); shape(ctx, n); ctx.clip();
+  ctx.strokeStyle = "rgba(140,0,0,0.55)"; ctx.lineWidth = 5; ctx.lineCap = "round";
+  for (const [a, b, c] of CREASE[side]) { ctx.beginPath(); ctx.moveTo(a[0], a[1]); ctx.quadraticCurveTo(b[0], b[1], c[0], c[1]); ctx.stroke(); }
+  ctx.restore();
+}
+function drawBoot(ctx, side) {
+  shade(ctx, side === "L" ? "bootL" : "bootR", PAL.red, { lx: 0.35, ly: 0.35, gloss: [[side === "L" ? 0.28 : 0.62, 0.62, 0.14, 0.07, 0.3, 0.35]] });
+}
+function drawNozzle(ctx) {   // 원추형 노즐 (원본 자리에 맞춰 직접 그림)
+  const g = ctx.createLinearGradient(60, 640, 80, 730);
+  g.addColorStop(0, "#6a6a72"); g.addColorStop(0.35, "#2a2a30"); g.addColorStop(1, "#0a0a0c");
+  ctx.fillStyle = g; ctx.strokeStyle = "#050505"; ctx.lineWidth = 3;
+  ctx.beginPath(); ctx.moveTo(160, 644); ctx.lineTo(118, 650); ctx.lineTo(10, 680); ctx.quadraticCurveTo(2, 720, 34, 748);
+  ctx.lineTo(126, 682); ctx.lineTo(160, 674); ctx.closePath(); ctx.fill(); ctx.stroke();
+  ctx.fillStyle = "rgba(255,255,255,0.35)";
+  ctx.beginPath(); ctx.moveTo(116, 656); ctx.lineTo(30, 684); ctx.lineTo(34, 692); ctx.lineTo(118, 664); ctx.closePath(); ctx.fill();
+  ctx.save(); ctx.translate(20, 713); ctx.rotate(-0.3);
+  ctx.fillStyle = "#1a1a1e"; ctx.beginPath(); ctx.ellipse(0, 0, 15, 38, 0, 0, 7); ctx.fill(); ctx.stroke();
+  ctx.fillStyle = "#050507"; ctx.beginPath(); ctx.ellipse(2, 2, 9, 30, 0, 0, 7); ctx.fill();
+  ctx.restore();
+}
+function drawExtinguisher(ctx) {   // 밸브(J.valve)를 기준으로 직접 그린 소화기
+  ctx.save(); ctx.translate(J.valve[0], J.valve[1]);
+  // 손잡이 고리
+  ctx.lineWidth = 30; ctx.strokeStyle = PAL.red[2]; ctx.beginPath(); ctx.arc(-26, -70, 46, 0, 7); ctx.stroke();
+  ctx.lineWidth = 24; const rg = ctx.createLinearGradient(-70, -120, 20, -20); rg.addColorStop(0, PAL.red[0]); rg.addColorStop(0.5, PAL.red[1]); rg.addColorStop(1, "#c01000");
+  ctx.strokeStyle = rg; ctx.beginPath(); ctx.arc(-26, -70, 46, 0, 7); ctx.stroke();
+  // 몸통
+  ctx.save(); ctx.translate(14, 36); ctx.rotate(-0.13); ctx.scale(0.88, 0.9);
+  const body = () => { ctx.beginPath(); ctx.moveTo(-92, 70); ctx.quadraticCurveTo(-92, 0, -20, -4); ctx.lineTo(20, -4); ctx.quadraticCurveTo(92, 0, 92, 70); ctx.lineTo(92, 282); ctx.quadraticCurveTo(92, 296, 78, 296); ctx.lineTo(-78, 296); ctx.quadraticCurveTo(-92, 296, -92, 282); ctx.closePath(); };
+  const bg = ctx.createLinearGradient(-92, 0, 92, 0);
+  bg.addColorStop(0, "#a80800"); bg.addColorStop(0.18, "#f0280e"); bg.addColorStop(0.3, "#ff7a60"); bg.addColorStop(0.42, "#f53a1c"); bg.addColorStop(0.8, "#d81600"); bg.addColorStop(1, "#8a0400");
+  body(); ctx.fillStyle = bg; ctx.fill(); ctx.lineWidth = 3; ctx.strokeStyle = "#7a0300"; ctx.stroke();
+  ctx.fillStyle = "rgba(255,255,255,0.55)"; ctx.beginPath(); ctx.roundRect(-50, 40, 12, 200, 6); ctx.fill();
+  ctx.fillStyle = "rgba(255,255,255,0.35)"; ctx.beginPath(); ctx.ellipse(-30, 14, 34, 9, -0.1, 0, 7); ctx.fill();
+  const kb = ctx.createLinearGradient(-92, 0, 92, 0); kb.addColorStop(0, "#050505"); kb.addColorStop(0.3, "#55555c"); kb.addColorStop(0.5, "#1a1a1e"); kb.addColorStop(1, "#050505");
+  ctx.fillStyle = kb; ctx.beginPath(); ctx.moveTo(-94, 262); ctx.lineTo(94, 262); ctx.lineTo(94, 290); ctx.quadraticCurveTo(94, 312, 72, 312); ctx.lineTo(-72, 312); ctx.quadraticCurveTo(-94, 312, -94, 290); ctx.closePath(); ctx.fill();
+  ctx.restore();
+  // 목, 은색 고리
+  const ng = ctx.createLinearGradient(-22, 0, 22, 0); ng.addColorStop(0, "#a00800"); ng.addColorStop(0.35, "#ff6040"); ng.addColorStop(1, "#b00a00");
+  ctx.fillStyle = ng; ctx.beginPath(); ctx.roundRect(-22, 14, 44, 34, 6); ctx.fill();
+  // 레버 (위 손잡이, 아래 방아쇠)
+  ctx.lineCap = "round"; ctx.strokeStyle = "#141418"; ctx.lineWidth = 20;
+  ctx.beginPath(); ctx.moveTo(-60, -40); ctx.quadraticCurveTo(0, -30, 62, -38); ctx.stroke();
+  ctx.lineWidth = 15; ctx.beginPath(); ctx.moveTo(-8, 4); ctx.lineTo(-82, 20); ctx.stroke();
+  ctx.fillStyle = "#c8ccd4"; ctx.beginPath(); ctx.roundRect(-40, 2, 26, 18, 4); ctx.fill();
+  ctx.strokeStyle = "rgba(255,255,255,0.3)"; ctx.lineWidth = 5; ctx.beginPath(); ctx.moveTo(-50, -46); ctx.quadraticCurveTo(0, -38, 50, -45); ctx.stroke();
+  // 밸브
+  const vg = ctx.createRadialGradient(-6, -6, 2, 0, 0, 26); vg.addColorStop(0, PAL.gold[0]); vg.addColorStop(0.6, PAL.gold[1]); vg.addColorStop(1, PAL.gold[2]);
+  ctx.fillStyle = vg; ctx.beginPath(); ctx.ellipse(0, 0, 25, 23, 0, 0, 7); ctx.fill(); ctx.strokeStyle = PAL.gold[2]; ctx.lineWidth = 2; ctx.stroke();
+  ctx.fillStyle = "#b07800"; ctx.beginPath(); ctx.ellipse(2, 0, 9, 8, 0, 0, 7); ctx.fill();
+  ctx.restore();
+}
+function drawCape(ctx, P, t) {
+  const c = P.cape || {}, rot = c.rot ?? 0, wave = c.wave ?? 10, sp = c.speed ?? 5, str = c.stretch ?? 1;
+  const A = J.cape, axis = Math.atan2(700 - A[1], 740 - A[0]) + rot;
+  const tf = ([x, y]) => {
+    const dx = x - A[0], dy = y - A[1];
+    const k = Math.min(1, Math.hypot(dx, dy) / 300);
+    const r = rot * (0.3 + 0.7 * k * k);   // 뿌리는 조금, 끝은 많이 돈다
+    let px = dx * Math.cos(r) - dy * Math.sin(r), py = dx * Math.sin(r) + dy * Math.cos(r);
+    const along = px * Math.cos(axis) + py * Math.sin(axis);
+    px += Math.cos(axis) * along * (str - 1) * k; py += Math.sin(axis) * along * (str - 1) * k;
+    const wv = wave * k * Math.sin(t * sp - k * 4 + (x + y) * 0.004);
+    return [A[0] + px - Math.sin(axis) * wv, A[1] + py + Math.cos(axis) * wv];
+  };
+  const draw = (name, pal, o) => {
+    const orig = PARTS[name].paths;
+    PARTS[name].paths = orig.map(p => p.map(tf));
+    shade(ctx, name, pal, o);
+    PARTS[name].paths = orig;
+  };
+  draw("cape", PAL.yellow, { lx: 0.55, ly: 0.35, r: 0.75, mid: 0.5 });
+  draw("capeFold", PAL.orange, { lx: 0.3, ly: 0.2, edge: 0 });
+}
+function drawHead(ctx, P) {
+  const f = P.face || {};
+  shade(ctx, "hood", PAL.purple, { lx: 0.2, ly: 0.35, r: 0.75, mid: 0.5, gloss: [[0.1, 0.42, 0.04, 0.16, 0.3, 0.3]] });
+  shade(ctx, "face", PAL.face, { only: 0, lx: 0.4, ly: 0.45, r: 0.65, mid: 0.55, edge: 4, edgeCol: "#4a1a80" });
+  ctx.save(); shape(ctx, "face", 0); ctx.clip();
+  shade(ctx, "hair", PAL.hair, { lx: 0.4, ly: 0.2, edge: 0, gloss: [[0.42, 0.18, 0.2, 0.06, -0.1, 0.12]] });
+  ctx.restore();
+  for (const [x, y, rx, ry] of [[146, 412, 38, 33], [410, 456, 40, 35]]) {   // 볼
+    const g = ctx.createRadialGradient(x, y, 2, x, y, rx);
+    g.addColorStop(0, "rgba(255,125,125,0.8)"); g.addColorStop(0.7, "rgba(255,135,130,0.6)"); g.addColorStop(1, "rgba(255,150,140,0)");
+    ctx.fillStyle = g; ctx.beginPath(); ctx.ellipse(x, y, rx, ry, 0, 0, 7); ctx.fill();
+  }
+  const blink = f.blink || 0, look = f.look || [0, 0];   // 눈: 깜빡임, 눈웃음, 시선
+  for (const [e, gl] of [["eyeL", "glintL"], ["eyeR", "glintR"]]) {
+    const [x0, y0, x1, y1] = PARTS[e].bbox, cx = (x0 + x1) / 2, cy = (y0 + y1) / 2;
+    ctx.save(); ctx.translate(cx + look[0] * 6, cy + look[1] * 6);
+    if (f.eyes === "happy") {
+      ctx.strokeStyle = "#111"; ctx.lineWidth = 11; ctx.lineCap = "round";
+      ctx.beginPath(); ctx.arc(0, 16, 26, Math.PI * 1.12, Math.PI * 1.88); ctx.stroke();
+    } else {
+      ctx.scale(1, Math.max(0.07, 1 - blink)); ctx.translate(-cx, -cy);
+      shade(ctx, e, ["#2a2a30", "#0c0c0e", "#000"], { edge: 0 });
+      if (blink < 0.5) { ctx.fillStyle = "#fff"; shape(ctx, gl); ctx.fill(); ctx.beginPath(); ctx.arc(x0 + (x1 - x0) * 0.35, y0 + (y1 - y0) * 0.72, 5, 0, 7); ctx.fill(); }
+    }
     ctx.restore();
   }
-  ctx.restore();
-  // 헬멧
-  ctx.save(); ctx.translate(26, -196); ctx.rotate(0.13); ctx.scale(0.92, 0.92);
-  const dome = () => { ctx.beginPath(); ctx.moveTo(-238, 46); ctx.lineTo(-222, -74); ctx.quadraticCurveTo(-208, -132, -138, -136); ctx.lineTo(150, -136); ctx.quadraticCurveTo(222, -132, 234, -72); ctx.lineTo(246, 46); ctx.closePath(); };
-  ctx.fillStyle = CH.helmet[2]; ctx.save(); ctx.translate(0, 5); dome(); ctx.fill(); ctx.restore();
-  const hg = ctx.createLinearGradient(-230, -140, 240, 40); hg.addColorStop(0, CH.helmet[0]); hg.addColorStop(0.5, CH.helmet[1]); hg.addColorStop(1, CH.helmet[2]);
-  ctx.fillStyle = hg; dome(); ctx.fill();
-  ctx.save(); dome(); ctx.clip();
-  ctx.fillStyle = radial(ctx, -14, -58, 98, [CH.emblem[0], CH.emblem[1], "#f25e14"]);
-  ctx.beginPath(); ctx.ellipse(-14, -58, 98, 80, 0, 0, 7); ctx.fill();
-  ctx.save(); ctx.beginPath(); ctx.ellipse(-14, -58, 98, 80, 0, 0, 7); ctx.clip();
-  ctx.fillStyle = CH.stripe; ctx.beginPath(); ctx.moveTo(4, -150); ctx.lineTo(44, -150); ctx.lineTo(8, 40); ctx.lineTo(-32, 40); ctx.closePath(); ctx.fill();
-  ctx.restore();
-  ctx.fillStyle = "rgba(255,255,255,0.25)"; ctx.beginPath(); ctx.ellipse(-150, -95, 50, 16, -0.15, 0, 7); ctx.fill();
-  ctx.restore();
-  ctx.fillStyle = "#56209e"; ctx.beginPath(); ctx.roundRect(-252, 22, 506, 48, 24); ctx.fill();
-  ctx.fillStyle = CH.band; ctx.beginPath(); ctx.roundRect(-250, 20, 502, 40, 20); ctx.fill();
-  ctx.fillStyle = "rgba(255,255,255,0.22)"; ctx.beginPath(); ctx.roundRect(-230, 26, 300, 8, 4); ctx.fill();
-  ctx.restore();
-}
-
-function extinguisher(ctx, top, ang, nozzleHand, nozzleDir, sc = 1) {
-  ctx.save(); ctx.translate(top[0], top[1]); ctx.rotate(ang); ctx.scale(sc, sc);
-  const body = () => { ctx.beginPath(); ctx.roundRect(-72, 26, 144, 300, [62, 62, 16, 16]); };
-  ctx.fillStyle = CH.red[2]; ctx.save(); ctx.translate(0, 4); body(); ctx.fill(); ctx.restore();
-  const g = ctx.createLinearGradient(-72, 0, 72, 0); g.addColorStop(0, "#b8160e"); g.addColorStop(0.35, "#ff5a40"); g.addColorStop(0.6, "#e8251a"); g.addColorStop(1, "#9c100a");
-  ctx.fillStyle = g; body(); ctx.fill();
-  ctx.fillStyle = CH.black[1]; ctx.beginPath(); ctx.roundRect(-74, 296, 148, 36, 10); ctx.fill();
-  ctx.fillStyle = "rgba(255,255,255,0.3)"; ctx.fillRect(-42, 70, 14, 210);
-  ctx.fillStyle = CH.black[1]; ctx.beginPath(); ctx.roundRect(-20, 4, 40, 30, 6); ctx.fill();
-  ctx.fillStyle = radial(ctx, 0, 0, 22, [CH.metal[0], CH.metal[1], "#a07800"]); ctx.beginPath(); ctx.arc(0, 0, 22, 0, 7); ctx.fill();
-  ctx.strokeStyle = CH.black[1]; ctx.lineWidth = 12; ctx.lineCap = "round";
-  ctx.beginPath(); ctx.moveTo(-10, -8); ctx.lineTo(-90, -24); ctx.stroke();   // 손잡이
-  ctx.restore();
-  if (!nozzleHand) return;
-  // 호스와 노즐
-  const valve = top;
-  ctx.strokeStyle = CH.black[1]; ctx.lineWidth = 16; ctx.lineCap = "round";
-  ctx.beginPath(); ctx.moveTo(valve[0], valve[1]);
-  ctx.bezierCurveTo(valve[0] + 60, valve[1] + 120, nozzleHand[0] + 40, nozzleHand[1] + 90, nozzleHand[0], nozzleHand[1]); ctx.stroke();
-  ctx.save(); ctx.translate(nozzleHand[0], nozzleHand[1]); ctx.rotate(nozzleDir);
-  ctx.fillStyle = CH.black[1];
-  ctx.beginPath(); ctx.moveTo(0, -14); ctx.lineTo(110, -30); ctx.lineTo(110, 30); ctx.lineTo(0, 14); ctx.closePath(); ctx.fill();
-  ctx.fillStyle = CH.black[0]; ctx.beginPath(); ctx.moveTo(10, -10); ctx.lineTo(100, -22); ctx.lineTo(100, -10); ctx.lineTo(10, -2); ctx.fill();
-  ctx.fillStyle = "#2a2a30"; ctx.beginPath(); ctx.ellipse(110, 0, 10, 30, 0, 0, 7); ctx.fill();
-  ctx.restore();
-}
-
-// pose: x, y, s, rot, torso, head, lh, rh, lf, rf (목표 위치), lb, rb (팔꿈치 굽는 방향), lfd, rfd (발끝 방향), cape, face, prop
-function drawChar(ctx, pose, t) {
-  const P = Object.assign({ s: 1, rot: 0, torso: 0, head: 0, lb: 1, rb: -1, lkb: -1, rkb: 1, lfd: -1, rfd: 1, prop: "none" }, pose);
-  ctx.save(); ctx.translate(P.x, P.y); ctx.rotate(P.rot); ctx.scale(P.s * (P.sx || 1), P.s * (P.sy || 1));
-  const sh = [rot2(SH_L, P.torso), rot2(SH_R, P.torso)], neck = rot2(NECK, P.torso);
-  const [lk, lfoot] = ik(HIP_L, P.lf || [-150, 190], LEG[0], LEG[1], P.lkb);
-  const [rk, rfoot] = ik(HIP_R, P.rf || [150, 190], LEG[0], LEG[1], P.rkb);
-  const [le, lhand] = ik(sh[0], P.lh || [-190, -40], ARM[0], ARM[1], P.lb);
-  const [re, rhand] = ik(sh[1], P.rh || [190, -40], ARM[0], ARM[1], P.rb);
-
-  cape(ctx, P, t);
-  limb(ctx, HIP_R, rk, rfoot, 120, CH.suit); boot(ctx, rk, rfoot, P.rfd);
-  limb(ctx, HIP_L, lk, lfoot, 120, CH.suit); boot(ctx, lk, lfoot, P.lfd);
-  if (P.prop === "back") extinguisher(ctx, rot2([150, -250], P.torso), P.torso + 0.45, null, 0, 0.75);
-  limb(ctx, sh[1], re, rhand, 90, CH.suit);
-  if (P.lBack) { limb(ctx, sh[0], le, lhand, 90, CH.suit); glove(ctx, lhand, 52, Math.PI); }
-  if (P.rBack) glove(ctx, rhand, 50, 0);
-  torso(ctx, P.torso);
-  ctx.save(); ctx.translate(neck[0], neck[1]); ctx.rotate(P.torso + P.head); ctx.translate(0, -178); ctx.scale(1.04, 1.04); head(ctx, P, t); ctx.restore();
-  if (P.prop === "spray") {
-    const dir = Math.atan2(lhand[1] - rhand[1], lhand[0] - rhand[0]);
-    extinguisher(ctx, [rhand[0] - 30, rhand[1] + 10], P.extAng || 0, lhand, P.nozzleDir ?? dir + 0.1, 0.95);
+  if (f.brow) {
+    ctx.strokeStyle = "#111"; ctx.lineWidth = 9; ctx.lineCap = "round";
+    ctx.beginPath(); ctx.moveTo(178, 296); ctx.lineTo(228, 312); ctx.stroke();
+    ctx.beginPath(); ctx.moveTo(398, 330); ctx.lineTo(350, 336); ctx.stroke();
   }
-  if (P.prop === "hand") extinguisher(ctx, [rhand[0], rhand[1] + 10], P.extAng || 0, null);
-  if (!P.rBack) glove(ctx, rhand, 50, 0);
-  if (!P.lBack) { limb(ctx, sh[0], le, lhand, 90, CH.suit); glove(ctx, lhand, 52, Math.PI); }
-  ctx.restore();
-  return { lhand, rhand };
+  const mo = f.mouth || "open";   // 입
+  if (mo === "open") {
+    shade(ctx, "mouth", ["#f0443a", "#d4201a", "#8a0a08"], { edge: 2, lx: 0.5, ly: 0.2 });
+    ctx.save(); shape(ctx, "mouth"); ctx.clip();
+    ctx.fillStyle = "#ff8f8a"; ctx.beginPath(); ctx.ellipse(272, 470, 30, 18, 0, 0, 7); ctx.fill();
+    ctx.restore();
+  } else if (mo === "smile") {
+    ctx.strokeStyle = "#c8201a"; ctx.lineWidth = 9; ctx.lineCap = "round"; ctx.beginPath(); ctx.arc(274, 412, 32, 0.35, Math.PI - 0.35); ctx.stroke();
+  } else if (mo === "o") {
+    ctx.fillStyle = "#c8201a"; ctx.beginPath(); ctx.ellipse(274, 440, 20, 26, 0, 0, 7); ctx.fill();
+  } else if (mo === "grit") {
+    ctx.fillStyle = "#c8201a"; ctx.beginPath(); ctx.roundRect(240, 420, 70, 30, 12); ctx.fill();
+    ctx.fillStyle = "#fff"; ctx.fillRect(248, 424, 54, 10);
+  }
+  shade(ctx, "band", PAL.purple, { lx: 0.3, ly: 0.2, r: 0.6, edge: 2, gloss: [[0.35, 0.25, 0.3, 0.08, 0.2, 0.25]] });   // 헬멧
+  shade(ctx, "helmet", PAL.red, { lx: 0.2, ly: 0.2, r: 0.8, mid: 0.4, gloss: [[0.16, 0.3, 0.1, 0.06, -0.5, 0.35]] });
+  shade(ctx, "emblem", PAL.orange, { lx: 0.35, ly: 0.3, r: 0.7, edge: 2 });
+  ctx.save(); shape(ctx, "emblem"); ctx.clip(); shade(ctx, "stripe", ["#ffd060", "#ffb52a", "#e89000"], { edge: 0 }); ctx.restore();
+  ctx.fillStyle = "rgba(255,255,255,0.8)"; shape(ctx, "hoodGlint"); ctx.fill();
 }
 
-// 자주 쓰는 포즈
+const rot2 = (p, a, c) => { const dx = p[0] - c[0], dy = p[1] - c[1]; return [c[0] + dx * Math.cos(a) - dy * Math.sin(a), c[1] + dx * Math.sin(a) + dy * Math.cos(a)]; };
+
+// pose: x, y, s, rot, torso, head, lh, rh, lf, rf (손발 목표, 원본 좌표), lb, rb, lkb, rkb (굽는 방향),
+//       cape {rot, wave, speed, stretch}, face {mouth, eyes, blink, look, brow}, prop: "spray" | "hand" | "none", lBack, rBack
+function drawChar(ctx, pose, t) {
+  const P = Object.assign({ s: 1, rot: 0, torso: 0, head: 0, lb: -1, rb: 1, lkb: 1, rkb: -1, prop: "spray" }, pose);
+  ctx.save(); ctx.translate(P.x, P.y); ctx.rotate(P.rot); ctx.scale(P.s * (P.sx || 1), P.s * (P.sy || 1)); ctx.translate(-J.pelvis[0], -J.pelvis[1]);
+  const up = p => rot2(p, P.torso, J.pelvis);
+  const shL = up(J.shL), shR = up(J.shR), neck = up(J.neck);
+  const [kL, aL] = ik(J.hipL, P.lf || J.ankleL, LIMB.thigh, LIMB.shin, P.lkb);
+  const [kR, aR] = ik(J.hipR, P.rf || J.ankleR, LIMB.thigh, LIMB.shin, P.rkb);
+  const [eL, hL] = ik(shL, P.lh || J.handL, LIMB.upper, LIMB.fore, P.lb);
+  const [eR, hR] = ik(shR, P.rh || J.handR, LIMB.upper, LIMB.fore, P.rb);
+  const ang = (a, b) => Math.atan2(b[1] - a[1], b[0] - a[0]);
+  const bodyRot = fn => { ctx.save(); ctx.translate(J.pelvis[0], J.pelvis[1]); ctx.rotate(P.torso); ctx.translate(-J.pelvis[0], -J.pelvis[1]); fn(); ctx.restore(); };
+
+  bodyRot(() => drawCape(ctx, P, t));
+  limb(ctx, J.hipR, kR, aR, 64, 56, PAL.blue);
+  attached(ctx, J.ankleR, aR, ang(kR, aR) - ORIG.shinR, () => drawBoot(ctx, "R"));
+  limb(ctx, J.hipL, kL, aL, 64, 56, PAL.blue);
+  attached(ctx, J.ankleL, aL, ang(kL, aL) - ORIG.shinL, () => drawBoot(ctx, "L"));
+  const gloveR = () => attached(ctx, J.handR, hR, ang(eR, hR) - ORIG.foreR, () => drawGlove(ctx, "R"));
+  const gloveL = () => attached(ctx, J.handL, hL, ang(eL, hL) - ORIG.foreL, () => { if (P.prop === "spray") drawNozzle(ctx); drawGlove(ctx, "L"); });
+  limb(ctx, shR, eR, hR, 58, 44, PAL.blue);
+  if (P.rBack) gloveR();
+  if (P.lBack) { limb(ctx, shL, eL, hL, 58, 44, PAL.blue); gloveL(); }
+  bodyRot(() => shade(ctx, "torso", PAL.blue, { lx: 0.35, ly: 0.2, r: 0.7, mid: 0.5 }));
+  attached(ctx, J.neck, neck, P.torso + P.head, () => drawHead(ctx, P));
+  if (!P.lBack) limb(ctx, shL, eL, hL, 58, 44, PAL.blue);
+  if (P.prop === "spray") {
+    const valve = [hR[0] - 100, hR[1] - 8];
+    const nb = rot2([150, 668], ang(eL, hL) - ORIG.foreL, J.handL); nb[0] += hL[0] - J.handL[0]; nb[1] += hL[1] - J.handL[1];
+    attached(ctx, J.valve, valve, P.extAng || 0, () => drawExtinguisher(ctx));
+    ctx.strokeStyle = "#16161a"; ctx.lineWidth = 16; ctx.lineCap = "round";   // 호스
+    ctx.beginPath(); ctx.moveTo(valve[0] + 62, valve[1] + 70); ctx.bezierCurveTo(valve[0] + 170, valve[1] + 150, valve[0] + 160, valve[1] - 10, valve[0] + 50, valve[1] - 34); ctx.stroke();
+    ctx.beginPath(); ctx.moveTo(valve[0] - 10, valve[1] - 20); ctx.quadraticCurveTo((valve[0] + nb[0]) / 2, Math.min(valve[1], nb[1]) - 40, nb[0], nb[1]); ctx.stroke();
+
+  } else if (P.prop === "hand") {
+    attached(ctx, [288, 640], [hR[0], hR[1] + 20], P.extAng || 0, () => drawExtinguisher(ctx));
+  }
+  if (!P.rBack) gloveR();
+  if (!P.lBack) gloveL();
+  ctx.restore();
+  return { hL, hR };
+}
+
 const POSES = {
-  spray: { torso: 0.02, head: -0.06, lh: [-150, -130], rh: [80, -100], lb: -1, rb: 1, lf: [-160, 140], rf: [200, 130], lkb: 1, rkb: -1, prop: "spray", cape: { a: 1.15, len: 380, wave: 12 }, face: { mouth: "open" } },
-  stand: { lh: [-215, -20], rh: [215, -20], lb: 1, rb: -1, lf: [-110, 195], rf: [110, 195], prop: "hand", cape: { a: 1.0, len: 330, wave: 10, speed: 3 }, face: { mouth: "smile" } },
-  flyUp: { rot: -0.3, torso: 0, head: 0.1, lBack: 1, lh: [-330, -400], rh: [230, -30], lb: 1, rb: -1, lf: [-40, 220], rf: [60, 240], lkb: 1, rkb: -1, lfd: -0.4, rfd: 0.4, prop: "hand", extAng: 0.2, cape: { a: 0.55, len: 440, wave: 26, speed: 12 }, face: { mouth: "grit", brow: 1 } },
-  lift: { head: -0.12, lBack: 1, rBack: 1, lh: [-320, -420], rh: [320, -420], lb: -1, rb: 1, lf: [-150, 180], rf: [150, 180], prop: "back", cape: { a: 1.1, len: 340, wave: 14, speed: 5 }, face: { mouth: "open", look: [0, -1] } },
-  throwDown: { torso: 0.18, head: 0.15, lh: [-300, -80], rh: [300, -80], lb: -1, rb: 1, lf: [-170, 170], rf: [190, 150], prop: "back", cape: { a: 2.2, len: 380, wave: 22, speed: 10 }, face: { mouth: "grit", brow: 1 } },
-  run: { torso: 0.12, head: 0.05, lh: [-120, -60], rh: [200, -160], lb: 1, rb: -1, lf: [-170, 130], rf: [170, 200], lkb: -1, rkb: 1, prop: "hand", extAng: -0.3, cape: { a: 1.35, len: 380, wave: 20, speed: 10 }, face: { mouth: "open", brow: 1 } },
-  cheer: { lBack: 1, lh: [-330, -400], rh: [160, -20], lb: -1, rb: -1, lf: [-120, 190], rf: [120, 190], prop: "hand", cape: { a: 1.1, len: 340, wave: 12, speed: 5 }, face: { mouth: "open", eyes: "happy" } },
+  spray: { face: { mouth: "open" } },
+  stand: { lh: [110, 790], rh: [520, 790], lb: 1, rb: -1, lf: [230, 1000], rf: [400, 1000], lkb: 1, rkb: -1, prop: "hand", cape: { rot: 0.5, wave: 8, speed: 3 }, face: { mouth: "smile" } },
+  run: { torso: 0.1, lh: [110, 700], rh: [540, 620], lf: [150, 960], rf: [470, 1010], prop: "none", cape: { rot: -0.05, wave: 18, speed: 10, stretch: 1.1 }, face: { mouth: "open", brow: 1 } },
+  flyUp: { rot: -0.25, lBack: 1, lh: [40, 420], rh: [560, 760], lb: 1, rb: -1, lf: [290, 1030], rf: [360, 1040], lkb: 1, rkb: -1, prop: "hand", extAng: 0.3, cape: { rot: 0.9, wave: 26, speed: 12, stretch: 1.2 }, face: { mouth: "grit", brow: 1 } },
+  lift: { lBack: 1, rBack: 1, head: -0.06, lh: [40, 400], rh: [580, 400], lb: -1, rb: 1, lf: [170, 990], rf: [460, 990], prop: "none", cape: { rot: 0.4, wave: 12, speed: 5 }, face: { mouth: "open", look: [0, -1] } },
+  throwDown: { torso: 0.15, head: 0.1, lh: [40, 760], rh: [590, 760], lb: -1, rb: 1, lf: [150, 960], rf: [500, 950], prop: "none", cape: { rot: -0.8, wave: 22, speed: 10 }, face: { mouth: "grit", brow: 1 } },
+  cheer: { lBack: 1, lh: [30, 420], rh: [540, 800], lb: -1, rb: -1, lf: [230, 1000], rf: [410, 1000], prop: "hand", cape: { rot: 0.3, wave: 12, speed: 5 }, face: { mouth: "open", eyes: "happy" } },
 };
+
+// 두 포즈 사이를 k(0~1)만큼 섞는다. 숫자와 좌표는 선형으로, 나머지(표정, 소품)는 가까운 쪽을 따른다.
+function lerpPose(a, b, k) {
+  const base = { rot: 0, torso: 0, head: 0, lh: J.handL, rh: J.handR, lf: J.ankleL, rf: J.ankleR, lb: -1, rb: 1, lkb: 1, rkb: -1, extAng: 0 };
+  const A = Object.assign({}, base, a), B = Object.assign({}, base, b), out = Object.assign({}, k < 0.5 ? A : B);
+  for (const key of ["rot", "torso", "head", "extAng"]) out[key] = A[key] + (B[key] - A[key]) * k;
+  for (const key of ["lh", "rh", "lf", "rf"]) out[key] = [A[key][0] + (B[key][0] - A[key][0]) * k, A[key][1] + (B[key][1] - A[key][1]) * k];
+  const ca = Object.assign({ rot: 0, wave: 10, speed: 5, stretch: 1 }, A.cape), cb = Object.assign({ rot: 0, wave: 10, speed: 5, stretch: 1 }, B.cape);
+  out.cape = {}; for (const key in ca) out.cape[key] = ca[key] + (cb[key] - ca[key]) * k;
+  return out;
+}

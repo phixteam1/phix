@@ -8,10 +8,11 @@ const [page_, out, fps = "30", ffmpeg = "ffmpeg", exe, from = "0", to] = process
 (async () => {
   const browser = await chromium.launch(exe ? { executablePath: exe } : {});
   const page = await browser.newPage({ viewport: { width: 1200, height: 2000 } });
+  await page.addInitScript(() => { window.RENDER = 1; });
   await page.goto("file://" + path.resolve(page_));
   await page.evaluate(async () => {
     await document.fonts.load('96px "Do Hyeon"', "가나다");
-    if (!hero.complete) await new Promise(r => hero.onload = r);
+    if (typeof hero !== "undefined" && !hero.complete) await new Promise(r => hero.onload = r);
   });
   const total = to ? +to : await page.evaluate(() => TOTAL);
   const f0 = Math.round(+from * +fps), f1 = Math.round(total * +fps);
