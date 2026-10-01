@@ -20,10 +20,10 @@ Object.assign(ICONS, {
 $$('i[data-i]').forEach((el) => { if (!el.querySelector('svg *')) el.innerHTML = icon(el.dataset.i); });
 
 S.mode = 'pdf';
-S.imgOpts = { px: 0, q: 1, fmt: 'keep' };
+S.imgOpts = { scale: 1, q: 1, fmt: 'keep' };
 const IC = { items: [], sel: new Set(), anchor: null, seq: 0, timer: null, run: 0, undo: [], redo: [] };
 window.IC = IC;
-const optKey = (o) => `${o.px}|${o.q}|${o.fmt}`;
+const optKey = (o) => `${o.scale}|${o.q}|${o.fmt}`;
 const esc = (t) => String(t).replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/"/g, '&quot;');
 const EXT = { 'image/jpeg': 'jpg', 'image/webp': 'webp', 'image/png': 'png' };
 
@@ -144,7 +144,7 @@ function scheduleEstimate() { clearTimeout(IC.timer); renderIc(); IC.timer = set
 // ---------- 저장(용량·형식) ----------
 async function compressOne(it, o) {
   const bmp = await createImageBitmap(it.blob);
-  const s = o.px ? Math.min(1, o.px / Math.max(bmp.width, bmp.height)) : 1;
+  const s = Math.min(1, o.scale || 1);
   const w = Math.max(1, Math.round(bmp.width * s)), h = Math.max(1, Math.round(bmp.height * s));
   const ft = it.file.type;
   const type = o.fmt === 'webp' ? 'image/webp' : o.fmt === 'png' ? 'image/png' : o.fmt === 'keep' && /(png|webp|jpeg)$/i.test(ft) ? ft : 'image/jpeg';
@@ -408,8 +408,8 @@ iWrap.addEventListener('drop', (e) => {
 
 // ---------- 단추 연결 ----------
 $('.modes').onclick = (e) => { const b = e.target.closest('[data-mode]'); if (b) setMode(b.dataset.mode); };
-const imgOptChanged = () => { S.imgOpts = { px: +$('#mPx').value, q: +$('#mQ').value / 100, fmt: $('#mFmt').value }; $('#mQV').textContent = $('#mQ').value + '%'; scheduleEstimate(); };
-$('#mQ').oninput = imgOptChanged; $('#mPx').onchange = imgOptChanged; $('#mFmt').onchange = imgOptChanged;
+const imgOptChanged = () => { S.imgOpts = { scale: +$('#mPx').value / 100, q: +$('#mQ').value / 100, fmt: $('#mFmt').value }; $('#mQV').textContent = $('#mQ').value + '%'; $('#mPxV').textContent = $('#mPx').value + '%'; scheduleEstimate(); };
+$('#mQ').oninput = imgOptChanged; $('#mPx').oninput = imgOptChanged; $('#mFmt').onchange = imgOptChanged;
 $('#iAdd').onclick = $('#icAdd2').onclick = () => $('#fileImgC').click();
 $('#fileImgC').onchange = (e) => { const f = [...e.target.files]; e.target.value = ''; imgAddFiles(f); };
 $('#icSave').onclick = saveCompImgs;

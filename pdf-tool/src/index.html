@@ -114,8 +114,7 @@
 <main id="imgMain" hidden>
   <aside class="iside">
     <div class="side-h">저장</div>
-    <div class="ifield"><label>크기</label><select id="mPx">
-      <option value="0" selected>원본 크기</option><option value="3000">긴 변 3000px</option><option value="2000">긴 변 2000px</option><option value="1280">긴 변 1280px</option><option value="800">긴 변 800px</option></select></div>
+    <div class="ifield"><label>크기 <span id="mPxV">100%</span></label><input type="range" id="mPx" min="10" max="100" step="5" value="100"></div>
     <div class="ifield"><label>화질 <span id="mQV">100%</span></label><input type="range" id="mQ" min="40" max="100" step="5" value="100"></div>
     <div class="ifield"><label>형식</label><select id="mFmt"><option value="keep" selected>원본 형식</option><option value="jpg">JPG</option><option value="png">PNG</option><option value="webp">WebP</option></select></div>
     <div class="icsum" id="icSum">이미지를 올려줘</div>
