@@ -177,6 +177,13 @@ body.dragfile #gridWrap{outline:3px dashed var(--accent);outline-offset:-8px}
     <button id="bExtract" class="tb" title="선택 페이지만 새 PDF로 저장"><i data-i="extract"></i><span>추출</span></button>
     <button id="bSplit" class="tb" title="여러 파일로 나누기"><i data-i="split"></i><span>분할</span></button>
     <button id="bImg" class="tb" title="페이지를 JPG·PNG 이미지로 저장"><i data-i="image"></i><span>이미지로</span></button>
+    <div class="dd">
+      <button class="tb" data-dd="ddComp" title="용량 줄이기"><i data-i="compress"></i><span>용량</span><i data-i="caret" class="caret"></i></button>
+      <div class="menu" id="ddComp">
+        <button id="mCompPdf">PDF 용량 줄이기…</button>
+        <button id="mCompImg">이미지 파일 용량 줄이기…</button>
+      </div>
+    </div>
   </div>
   <div class="group">
     <button id="bNum" class="tb" title="페이지 번호 넣기"><i data-i="num"></i><span>쪽번호</span></button>
@@ -240,6 +247,7 @@ body.dragfile #gridWrap{outline:3px dashed var(--accent);outline-offset:-8px}
 <footer id="status"><span id="stTotal"></span><span id="stSel"></span><span class="spacer"></span><span id="stMsg"></span></footer>
 
 <input id="fileIn" type="file" multiple accept="application/pdf,.pdf,image/*" hidden>
+<input id="fileImgC" type="file" multiple accept="image/*" hidden>
 <input id="fileIns" type="file" multiple accept="application/pdf,.pdf,image/*" hidden>
 
 <div id="modal" class="modal" hidden><div class="dlg"><div class="dlg-h"><span id="dlgTitle"></span><button class="x" data-close>×</button></div><div class="dlg-b" id="dlgBody"></div><div class="dlg-f" id="dlgFoot"></div></div></div>
@@ -332,7 +340,7 @@ body.dragfile #gridWrap{outline:3px dashed var(--accent);outline-offset:-8px}
 <script>
 'use strict';
 /* PDF 정리함 — 브라우저 안에서만 동작하는 PDF 페이지 편집기 (pdf.js 렌더링 + pdf-lib 저장) */
-const { PDFDocument, degrees, StandardFonts, rgb } = PDFLib;
+const { PDFDocument, degrees, StandardFonts, rgb, PDFName, PDFRawStream, PDFArray, PDFNumber, PDFDict, PDFRef, PDFBool } = PDFLib;
 const $ = (s) => document.querySelector(s);
 const $$ = (s) => [...document.querySelectorAll(s)];
 
@@ -364,6 +372,7 @@ const ICONS = {
   rotr: '<path d="M20 4v6h-6"/><path d="M19.5 10A8 8 0 1 0 18 16.5"/>',
   trash: '<path d="M4 7h16M10 11v6M14 11v6M6 7l1 13h10l1-13M9 7V4h6v3"/>',
   image: '<rect x="3" y="4" width="18" height="16" rx="2"/><circle cx="9" cy="10" r="2"/><path d="M21 17l-5-5-8 8"/>',
+  compress: '<path d="M4 9h16M4 15h16M12 3v4M9 5l3 3 3-3M12 21v-4M9 19l3-3 3 3"/>',
   extract: '<rect x="3" y="4" width="11" height="15" rx="1.5"/><path d="M12 12h9M18 9l3 3-3 3"/>',
   split: '<rect x="3" y="4" width="7" height="16" rx="1"/><rect x="14" y="4" width="7" height="16" rx="1"/>',
   num: '<rect x="5" y="3" width="14" height="18" rx="1.5"/><path d="M10 17h4M12 17v-4"/>',
@@ -931,6 +940,179 @@ async function doSplit(groups, outMode, mode) {
     }
   } catch (e) { console.error(e); unbusy(); toast('분할 실패: ' + e.message, true); }
 }
+// ---------- 용량 줄이기 ----------
+const LEVELS = { // 그림 긴 변 최대 px, JPEG 품질, 페이지통째 dpi
+  low: { px: 2800, q: 0.85, dpi: 200, label: '약하게 (화질 우선)' },
+  mid: { px: 2000, q: 0.72, dpi: 150, label: '보통 (추천)' },
+  high: { px: 1300, q: 0.55, dpi: 110, label: '강하게 (용량 우선)' },
+};
+const fmtSize = (n) => n >= 1048576 ? (n / 1048576).toFixed(1) + 'MB' : Math.max(1, Math.round(n / 1024)) + 'KB';
+async function inflate(u8) {
+  const r = new Blob([u8]).stream().pipeThrough(new DecompressionStream('deflate'));
+  return new Uint8Array(await new Response(r).arrayBuffer());
+}
+function unPredict(data, colors, columns) { // PNG 예측자(10~15) 풀기, 8비트 전용
+  const bpp = colors, row = columns * colors, out = new Uint8Array(row * Math.floor(data.length / (row + 1)));
+  let prev = new Uint8Array(row);
+  for (let y = 0, i = 0; i + row + 1 <= data.length && y * row < out.length; y++) {
+    const ft = data[i++]; const cur = out.subarray(y * row, y * row + row);
+    for (let x = 0; x < row; x++) {
+      const raw = data[i++]; const a = x >= bpp ? cur[x - bpp] : 0, b = prev[x], c = x >= bpp ? prev[x - bpp] : 0;
+      let v;
+      if (ft === 0) v = raw; else if (ft === 1) v = raw + a; else if (ft === 2) v = raw + b; else if (ft === 3) v = raw + ((a + b) >> 1);
+      else { const p = a + b - c, pa = Math.abs(p - a), pb = Math.abs(p - b), pc = Math.abs(p - c); v = raw + (pa <= pb && pa <= pc ? a : pb <= pc ? b : c); }
+      cur[x] = v & 255;
+    }
+    prev = cur;
+  }
+  return out;
+}
+function canvasToBytes(c, type, q) { return new Promise((r) => c.toBlob(async (b) => r(new Uint8Array(await b.arrayBuffer())), type, q)); }
+async function recompressImage(dict, contents, lv) { // 줄일 수 있으면 {w,h,bytes}, 아니면 null
+  const L = (k) => dict.lookup(PDFName.of(k));
+  if (L('ImageMask') === PDFBool.True || L('Decode') || L('Mask') instanceof PDFArray) return null;
+  const w = L('Width')?.asNumber?.(), h = L('Height')?.asNumber?.(); if (!w || !h) return null;
+  let filter = L('Filter'); if (filter instanceof PDFArray) { if (filter.size() !== 1) return null; filter = filter.lookup(0); }
+  const fname = filter ? filter.asString() : '';
+  let cs = L('ColorSpace'), ncomp = 0;
+  if (cs instanceof PDFName) ncomp = { '/DeviceRGB': 3, '/DeviceGray': 1, '/DeviceCMYK': 4 }[cs.asString()] || 0;
+  else if (cs instanceof PDFArray && cs.lookup(0)?.asString?.() === '/ICCBased') { const st = cs.lookup(1); ncomp = st?.dict?.lookup(PDFName.of('N'))?.asNumber?.() || 0; }
+  if (!ncomp) return null;
+  const scale = Math.min(1, lv.px / Math.max(w, h));
+  let src; // 캔버스에 그릴 원본
+  if (fname === '/DCTDecode') {
+    if (scale === 1 && contents.length < w * h * 0.25) return null; // 이미 작게 압축된 JPEG
+    try { src = await createImageBitmap(new Blob([contents], { type: 'image/jpeg' })); } catch (e) { return null; }
+  } else if (fname === '/FlateDecode' || !fname) {
+    if (ncomp === 4 || L('BitsPerComponent')?.asNumber?.() !== 8) return null;
+    let px = contents; if (fname) { try { px = await inflate(contents); } catch (e) { return null; } }
+    const dp = L('DecodeParms'); const pred = dp instanceof PDFDict ? dp.lookup(PDFName.of('Predictor'))?.asNumber?.() || 1 : 1;
+    if (pred >= 10) px = unPredict(px, ncomp, w); else if (pred !== 1) return null;
+    if (px.length < w * h * ncomp) return null;
+    const id = new ImageData(w, h); const d = id.data;
+    for (let i = 0, j = 0; i < w * h; i++, j += ncomp) {
+      const k = i * 4;
+      if (ncomp === 1) d[k] = d[k + 1] = d[k + 2] = px[j]; else { d[k] = px[j]; d[k + 1] = px[j + 1]; d[k + 2] = px[j + 2]; }
+      d[k + 3] = 255;
+    }
+    src = document.createElement('canvas'); src.width = w; src.height = h; src.getContext('2d').putImageData(id, 0, 0);
+  } else return null;
+  const nw = Math.max(1, Math.round(w * scale)), nh = Math.max(1, Math.round(h * scale));
+  const c = document.createElement('canvas'); c.width = nw; c.height = nh;
+  const g = c.getContext('2d'); g.fillStyle = '#fff'; g.fillRect(0, 0, nw, nh); g.imageSmoothingQuality = 'high'; g.drawImage(src, 0, 0, nw, nh);
+  const bytes = await canvasToBytes(c, 'image/jpeg', lv.q); c.width = c.height = 0; if (src.close) src.close();
+  return bytes.length < contents.length * 0.9 ? { w: nw, h: nh, bytes } : null;
+}
+async function compressPdfImages(bytes, lv, progress) { // 그림만 다시 압축 (글자·도형은 그대로)
+  const doc = await PDFDocument.load(bytes, { updateMetadata: false }); const ctx = doc.context;
+  const all = ctx.enumerateIndirectObjects(); const smasks = new Set();
+  for (const [, o] of all) if (o instanceof PDFRawStream) { const sm = o.dict.get(PDFName.of('SMask')); if (sm instanceof PDFRef) smasks.add(sm.toString()); }
+  const imgs = all.filter(([r, o]) => o instanceof PDFRawStream && o.dict.lookup(PDFName.of('Subtype'))?.asString?.() === '/Image' && !smasks.has(r.toString()));
+  let done = 0;
+  for (const [ref, o] of imgs) {
+    progress && progress(`그림 줄이는 중… (${++done}/${imgs.length})`); await tick();
+    const r = await recompressImage(o.dict, o.contents, lv).catch(() => null); if (!r) continue;
+    const nd = ctx.obj({ Type: 'XObject', Subtype: 'Image', Width: r.w, Height: r.h, ColorSpace: 'DeviceRGB', BitsPerComponent: 8, Filter: 'DCTDecode', Length: r.bytes.length });
+    for (const k of ['SMask', 'Interpolate', 'Intent']) { const v = o.dict.get(PDFName.of(k)); if (v) nd.set(PDFName.of(k), v); }
+    ctx.assign(ref, PDFRawStream.of(nd, r.bytes));
+  }
+  return await doc.save({ useObjectStreams: true });
+}
+async function rasterizePdf(bytes, lv, progress) { // 페이지를 통째로 JPEG로 (가장 작지만 글자 선택 안 됨)
+  const src = await pdfjsLib.getDocument({ data: bytes.slice(), CMapReaderFactory: EmbeddedCMapReader, isEvalSupported: false, ...(PDF_WORKER ? { worker: PDF_WORKER } : {}) }).promise;
+  const out = await PDFDocument.create();
+  for (let k = 0; k < src.numPages; k++) {
+    progress && progress(`페이지 그리는 중… (${k + 1}/${src.numPages})`); await tick();
+    const page = await src.getPage(k + 1); const v1 = page.getViewport({ scale: 1 });
+    const vp = page.getViewport({ scale: lv.dpi / 72 });
+    const c = document.createElement('canvas'); c.width = Math.round(vp.width); c.height = Math.round(vp.height);
+    const g = c.getContext('2d'); g.fillStyle = '#fff'; g.fillRect(0, 0, c.width, c.height);
+    await page.render({ canvasContext: g, viewport: vp }).promise; page.cleanup();
+    const jpg = await out.embedJpg(await canvasToBytes(c, 'image/jpeg', lv.q)); c.width = c.height = 0;
+    out.addPage([v1.width, v1.height]).drawImage(jpg, { x: 0, y: 0, width: v1.width, height: v1.height });
+  }
+  src.destroy();
+  return await out.save();
+}
+function openCompPdf() {
+  if (!S.pages.length) return toast('먼저 PDF를 열어줘', true);
+  const lv = Object.entries(LEVELS).map(([k, v]) => `<option value="${k}" ${k === 'mid' ? 'selected' : ''}>${v.label}</option>`).join('');
+  dialog('PDF 용량 줄이기', `
+    <div class="row"><label>압축 정도</label><select id="cLv">${lv}</select></div>
+    <div class="radio">
+      <label><input type="radio" name="cm" value="img" checked> 그림만 줄이기 (글자·표는 그대로, 추천)</label>
+      <label><input type="radio" name="cm" value="raster"> 페이지 전체를 이미지로 (가장 작아지지만 글자 복사·검색 안 됨)</label>
+    </div>
+    <div class="desc">지금 화면의 문서(회전·쪽번호 등 반영)를 줄여서 "_압축"을 붙여 저장해. 사진·스캔이 많은 PDF일수록 많이 줄어. 글자만 있는 문서는 거의 안 줄어.</div>`,
+  [{ label: '취소' }, { label: '줄여서 저장', primary: true, run: async () => {
+    const lv = LEVELS[dv('cLv').value]; const raster = $('#dlgBody').querySelector('input[name=cm]:checked').value === 'raster';
+    closeDialog(); await compressAndSave(lv, raster);
+  } }]);
+}
+async function compressAndSave(lv, raster) {
+  let before = 0, after = 0;
+  try {
+    const r = await saveFile(outName('_압축'), 'application/pdf', async () => {
+      busy('준비 중…'); await tick();
+      try {
+        const prog = (m) => ($('#busyMsg').textContent = m);
+        const orig = await buildPdf(S.pages, prog); before = orig.length;
+        let small = raster ? await rasterizePdf(orig, lv, prog) : await compressPdfImages(orig, lv, prog);
+        if (small.length >= orig.length) small = orig;
+        after = small.length; return small;
+      } finally { unbusy(); }
+    });
+    if (r) toast(after < before ? `${fmtSize(before)} → ${fmtSize(after)} (${Math.round((1 - after / before) * 100)}% 줄임)` : `더 줄일 게 없었어 (${fmtSize(before)}). 그림이 거의 없는 문서야`);
+  } catch (e) { console.error(e); unbusy(); toast('용량 줄이기 실패: ' + e.message, true); }
+}
+
+// 이미지 파일 용량 줄이기
+S.imgOpts = { px: 2000, q: 0.75, fmt: 'jpg' };
+function openCompImg() {
+  const o = S.imgOpts;
+  dialog('이미지 파일 용량 줄이기', `
+    <div class="row"><label>최대 크기</label><select id="mPx">
+      <option value="0">원래 크기 유지</option><option value="3000">3000px (인쇄용)</option><option value="2000">2000px (보통, 추천)</option><option value="1280">1280px (메일·메신저용)</option><option value="800">800px (아주 작게)</option></select></div>
+    <div class="row"><label>화질</label><input type="range" id="mQ" min="40" max="95" step="5" value="${Math.round(o.q * 100)}"><span class="val" id="mQV">${Math.round(o.q * 100)}%</span></div>
+    <div class="row"><label>저장 형식</label><select id="mFmt"><option value="jpg">JPG (사진, 가장 작음)</option><option value="webp">WebP (더 작지만 일부 프로그램 미지원)</option><option value="keep">원래 형식 유지 (PNG는 크기만 줄임)</option></select></div>
+    <div class="desc">긴 변 기준으로 줄이고, 원본보다 커지면 원본을 그대로 둬. 여러 장이면 ZIP 하나로 받아. 원본 파일은 바뀌지 않아.</div>`,
+  [{ label: '취소' }, { label: '이미지 고르기…', primary: true, run: () => {
+    S.imgOpts = { px: +dv('mPx').value, q: +dv('mQ').value / 100, fmt: dv('mFmt').value };
+    $('#fileImgC').click();
+  } }]);
+  dv('mPx').value = String(o.px); dv('mFmt').value = o.fmt;
+  dv('mQ').oninput = (e) => (dv('mQV').textContent = e.target.value + '%');
+}
+async function compressImages(files, o) {
+  files = files.filter((f) => /^image\//.test(f.type)); if (!files.length) return;
+  busy('이미지 줄이는 중…'); await tick();
+  const out = []; let before = 0, after = 0, fails = 0;
+  try {
+    for (let i = 0; i < files.length; i++) {
+      const f = files[i]; $('#busyMsg').textContent = `이미지 줄이는 중… (${i + 1}/${files.length})`; await tick();
+      before += f.size;
+      let bmp; try { bmp = await createImageBitmap(f); } catch (e) { fails++; continue; }
+      const s = o.px ? Math.min(1, o.px / Math.max(bmp.width, bmp.height)) : 1;
+      const w = Math.max(1, Math.round(bmp.width * s)), h = Math.max(1, Math.round(bmp.height * s));
+      const isPng = /png$/i.test(f.type);
+      const type = o.fmt === 'webp' ? 'image/webp' : o.fmt === 'keep' && (isPng || /webp$/i.test(f.type)) ? f.type : 'image/jpeg';
+      const c = document.createElement('canvas'); c.width = w; c.height = h; const g = c.getContext('2d');
+      if (type === 'image/jpeg') { g.fillStyle = '#fff'; g.fillRect(0, 0, w, h); }
+      g.imageSmoothingQuality = 'high'; g.drawImage(bmp, 0, 0, w, h); bmp.close();
+      let data = await canvasToBytes(c, type, o.q); c.width = c.height = 0;
+      const ext = { 'image/jpeg': 'jpg', 'image/webp': 'webp', 'image/png': 'png' }[type];
+      let name = baseName(f.name) + '_압축.' + ext;
+      if (data.length >= f.size) { data = new Uint8Array(await f.arrayBuffer()); name = f.name; }
+      let nm = name, k = 2; while (out.some((x) => x.name === nm)) nm = name.replace(/(\.[^.]+)$/, `(${k++})$1`);
+      after += data.length; out.push({ name: nm, data, type });
+    }
+  } finally { unbusy(); }
+  if (!out.length) return toast('이미지를 읽지 못했어', true);
+  if (out.length === 1) download(out[0].data, out[0].name, out[0].type);
+  else download(makeZip(out), (files.length ? baseName(files[0].name) : '이미지') + '_외_압축.zip', 'application/zip');
+  toast(`${out.length}장 ${fmtSize(before)} → ${fmtSize(after)} (${Math.round((1 - after / Math.max(1, before)) * 100)}% 줄임)` + (fails ? `\n${fails}장은 못 읽음` : ''));
+}
+
 // ---------- PDF → 이미지 ----------
 function openImg() {
   const n = S.pages.length; if (!n) return; const k = S.sel.size;
@@ -1146,6 +1328,9 @@ $('#bUndo').onclick = undo; $('#bRedo').onclick = redo;
 $('#bRotL').onclick = () => rotate(-90); $('#bRotR').onclick = () => rotate(90);
 $('#bDel').onclick = () => removePages();
 $('#bExtract').onclick = extractSel; $('#bSplit').onclick = openSplit; $('#bImg').onclick = openImg;
+$('#mCompPdf').onclick = () => { closeMenus(); openCompPdf(); };
+$('#mCompImg').onclick = () => { closeMenus(); openCompImg(); };
+$('#fileImgC').onchange = (e) => { const f = [...e.target.files]; e.target.value = ''; compressImages(f, S.imgOpts); };
 $('#bNum').onclick = openNum; $('#bWm').onclick = openWm; $('#bFit').onclick = openFit;
 $('#bSave').onclick = saveAll; $('#bTab').onclick = openInTab;
 $('#badges').onclick = (e) => { const b = e.target.closest('[data-b]'); if (!b) return; ({ num: openNum, wm: openWm, fit: openFit })[b.dataset.b](); };

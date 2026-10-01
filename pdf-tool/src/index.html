@@ -37,6 +37,13 @@
     <button id="bExtract" class="tb" title="선택 페이지만 새 PDF로 저장"><i data-i="extract"></i><span>추출</span></button>
     <button id="bSplit" class="tb" title="여러 파일로 나누기"><i data-i="split"></i><span>분할</span></button>
     <button id="bImg" class="tb" title="페이지를 JPG·PNG 이미지로 저장"><i data-i="image"></i><span>이미지로</span></button>
+    <div class="dd">
+      <button class="tb" data-dd="ddComp" title="용량 줄이기"><i data-i="compress"></i><span>용량</span><i data-i="caret" class="caret"></i></button>
+      <div class="menu" id="ddComp">
+        <button id="mCompPdf">PDF 용량 줄이기…</button>
+        <button id="mCompImg">이미지 파일 용량 줄이기…</button>
+      </div>
+    </div>
   </div>
   <div class="group">
     <button id="bNum" class="tb" title="페이지 번호 넣기"><i data-i="num"></i><span>쪽번호</span></button>
@@ -100,6 +107,7 @@
 <footer id="status"><span id="stTotal"></span><span id="stSel"></span><span class="spacer"></span><span id="stMsg"></span></footer>
 
 <input id="fileIn" type="file" multiple accept="application/pdf,.pdf,image/*" hidden>
+<input id="fileImgC" type="file" multiple accept="image/*" hidden>
 <input id="fileIns" type="file" multiple accept="application/pdf,.pdf,image/*" hidden>
 
 <div id="modal" class="modal" hidden><div class="dlg"><div class="dlg-h"><span id="dlgTitle"></span><button class="x" data-close>×</button></div><div class="dlg-b" id="dlgBody"></div><div class="dlg-f" id="dlgFoot"></div></div></div>
