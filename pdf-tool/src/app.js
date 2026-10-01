@@ -9,7 +9,7 @@ const WORKER_URL = URL.createObjectURL(new Blob([document.getElementById('pdfjs-
 pdfjsLib.GlobalWorkerOptions.workerSrc = WORKER_URL;
 // file:// 에서도 진짜 워커를 쓰도록 직접 만들어 넘김 (안 되면 pdf.js가 알아서 메인 스레드로)
 let PDF_WORKER = null;
-try { PDF_WORKER = new pdfjsLib.PDFWorker({ port: new Worker(WORKER_URL) }); } catch (e) { console.warn('worker', e); }
+try { PDF_WORKER = new pdfjsLib.PDFWorker({ port: new Worker(WORKER_URL) }); } catch (e) { /* 미리보기 창 등 워커가 막힌 곳: 메인 스레드로 동작 */ }
 const CMAPS = JSON.parse(document.getElementById('cmaps').textContent || '{}');
 function b64ToBytes(b64) { const s = atob(b64); const u = new Uint8Array(s.length); for (let i = 0; i < s.length; i++) u[i] = s.charCodeAt(i); return u; }
 class EmbeddedCMapReader {
