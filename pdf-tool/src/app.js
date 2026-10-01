@@ -362,7 +362,7 @@ function removePages(uids) {
   const first = S.pages.findIndex((p) => set.has(p.uid));
   S.pages = S.pages.filter((p) => !set.has(p.uid));
   S.sel = new Set(S.pages[Math.min(first, S.pages.length - 1)] ? [S.pages[Math.min(first, S.pages.length - 1)].uid] : []);
-  render(); toast(`${set.size}쪽 삭제 (Ctrl+Z로 되돌리기)`);
+  render(); toast(`${set.size}쪽 삭제`);
 }
 function duplicate() {
   const idx = selectedIdx(); if (!idx.length) return;
@@ -559,8 +559,7 @@ function openSplit() {
       <label><input type="radio" name="sm" value="ranges"> 범위 직접 입력 <input type="text" id="spR" placeholder="예: 1-3, 4-10, 11-" style="flex:1"></label>
       <label><input type="radio" name="sm" value="src"> 원래 파일별로 나누기 (병합 전 상태로)</label>
     </div>
-    <div class="row"><label>받는 방식</label><select id="spOut"><option value="zip">ZIP 하나로 묶어서</option><option value="multi">파일 여러 개로 각각</option></select></div>
-    <div class="desc">회전·쪽번호·워터마크 설정도 그대로 적용돼. "파일 여러 개"는 크롬이 여러 파일 다운로드 허용할지 물어볼 수 있어.</div>`,
+    <div class="row"><label>받는 방식</label><select id="spOut"><option value="zip">ZIP 하나로 묶어서</option><option value="multi">파일 여러 개로 각각</option></select></div>`,
   [{ label: '취소' }, { label: '분할 저장', primary: true, run: async () => {
     const mode = $('#dlgBody').querySelector('input[name=sm]:checked').value; let groups;
     if (mode === 'each') groups = S.pages.map((_, i) => [i + 1]);
@@ -702,8 +701,7 @@ function openCompPdf() {
     <div class="radio">
       <label><input type="radio" name="cm" value="img" checked> 그림만 줄이기 (글자·표는 그대로, 추천)</label>
       <label><input type="radio" name="cm" value="raster"> 페이지 전체를 이미지로 (가장 작아지지만 글자 복사·검색 안 됨)</label>
-    </div>
-    <div class="desc">지금 화면의 문서(회전·쪽번호 등 반영)를 줄여서 "_압축"을 붙여 저장해. 사진·스캔이 많은 PDF일수록 많이 줄어. 글자만 있는 문서는 거의 안 줄어.</div>`,
+    </div>`,
   [{ label: '취소' }, { label: '줄여서 저장', primary: true, run: async () => {
     const lv = LEVELS[dv('cLv').value]; const raster = $('#dlgBody').querySelector('input[name=cm]:checked').value === 'raster';
     closeDialog(); await compressAndSave(lv, raster);
@@ -735,8 +733,7 @@ function openImg() {
       <label><input type="radio" name="ir" value="all" ${k ? '' : 'checked'}> 전체 페이지 (${n}쪽)</label>
     </div>
     <div class="row"><label>형식</label><select id="iFmt"><option value="jpg">JPG (용량 작음)</option><option value="png">PNG (글자 선명, 용량 큼)</option></select></div>
-    <div class="row"><label>화질</label><select id="iDpi"><option value="96">보통 (화면용, 96dpi)</option><option value="150" selected>좋음 (150dpi)</option><option value="300">인쇄용 (300dpi)</option></select></div>
-    <div class="desc">회전·쪽번호·워터마크도 그대로 들어가. 여러 장이면 ZIP 하나로 받아.</div>`,
+    <div class="row"><label>화질</label><select id="iDpi"><option value="96">보통 (화면용, 96dpi)</option><option value="150" selected>좋음 (150dpi)</option><option value="300">인쇄용 (300dpi)</option></select></div>`,
   [{ label: '취소' }, { label: '이미지 저장', primary: true, run: async () => {
     const all = $('#dlgBody').querySelector('input[name=ir]:checked').value === 'all';
     const idx = all ? S.pages.map((_, i) => i) : selectedIdx();
@@ -793,13 +790,12 @@ function openNum() {
     <div class="row"><label>시작 번호</label><input type="number" id="nStart" min="0" value="${c.start}"></div>
     <div class="row"><label>글자 크기</label><input type="range" id="nSize" min="6" max="24" value="${c.size}"><span class="val" id="nSizeV">${c.size}pt</span></div>
     <div class="row"><label>여백</label><input type="range" id="nMargin" min="8" max="72" value="${c.margin}"><span class="val" id="nMarginV">${c.margin}pt</span></div>
-    <label style="display:flex;gap:8px;align-items:center"><input type="checkbox" id="nSkip" ${c.skipFirst ? 'checked' : ''}> 첫 페이지(표지)에는 안 넣기</label>
-    <div class="desc">저장할 때 모든 페이지에 들어가. 썸네일에서 미리 볼 수 있어.</div>`,
+    <label style="display:flex;gap:8px;align-items:center"><input type="checkbox" id="nSkip" ${c.skipFirst ? 'checked' : ''}> 첫 페이지(표지)에는 안 넣기</label>`,
   [...(c.on ? [{ label: '쪽번호 끄기', run: () => { pushUndo(); S.settings.num.on = false; render(); } }] : []), { label: '취소' },
     { label: '적용', primary: true, run: () => {
       pushUndo();
       S.settings.num = { on: true, pos: $('#numPos .on').dataset.pos, fmt: dv('nFmt').value, start: parseInt(dv('nStart').value) || 1, size: +dv('nSize').value, margin: +dv('nMargin').value, skipFirst: dv('nSkip').checked };
-      render(); toast('쪽번호 적용 (저장할 때 들어가)');
+      render(); toast('쪽번호 적용');
     } }]);
   dv('nFmt').value = c.fmt;
   $('#numPos').onclick = (e) => { const b = e.target.closest('button'); if (!b) return; $$('#numPos button').forEach((x) => x.classList.toggle('on', x === b)); };
@@ -813,13 +809,12 @@ function openWm() {
     <div class="row"><label>방향</label><select id="wAng"><option value="diag">대각선</option><option value="flat">가로</option></select></div>
     <div class="row"><label>색</label><select id="wColor"><option value="#808080">회색</option><option value="#d02020">빨강</option><option value="#2050c0">파랑</option><option value="#000000">검정</option></select></div>
     <div class="row"><label>크기</label><input type="range" id="wSize" min="15" max="100" value="${c.size}"><span class="val" id="wSizeV">${c.size}%</span></div>
-    <div class="row"><label>진하기</label><input type="range" id="wOp" min="5" max="60" value="${Math.round(c.opacity * 100)}"><span class="val" id="wOpV">${Math.round(c.opacity * 100)}%</span></div>
-    <div class="desc">저장할 때 모든 페이지 가운데에 들어가.</div>`,
+    <div class="row"><label>진하기</label><input type="range" id="wOp" min="5" max="60" value="${Math.round(c.opacity * 100)}"><span class="val" id="wOpV">${Math.round(c.opacity * 100)}%</span></div>`,
   [...(c.on ? [{ label: '워터마크 끄기', run: () => { pushUndo(); S.settings.wm.on = false; render(); } }] : []), { label: '취소' },
     { label: '적용', primary: true, run: () => {
       const text = dv('wText').value.trim(); if (!text) { toast('글자를 입력해', true); return false; }
       pushUndo(); S.settings.wm = { on: true, text, angle: dv('wAng').value, color: dv('wColor').value, size: +dv('wSize').value, opacity: +dv('wOp').value / 100 };
-      render(); toast('워터마크 적용 (저장할 때 들어가)');
+      render(); toast('워터마크 적용');
     } }]);
   dv('wAng').value = c.angle; dv('wColor').value = c.color;
   dv('wSize').oninput = (e) => (dv('wSizeV').textContent = e.target.value + '%');
@@ -828,8 +823,7 @@ function openWm() {
 function openFit() {
   const c = S.settings.fit;
   dialog('페이지 크기 맞추기', `
-    <div class="row"><label>용지</label><select id="fPaper"><option value="A4">A4 (210×297mm)</option><option value="A3">A3 (297×420mm)</option><option value="B5">B5 (176×250mm)</option><option value="Letter">Letter</option></select></div>
-    <div class="desc">크기가 제각각인 페이지를 전부 같은 용지 크기로 맞춰 (비율 유지, 가운데 정렬). 가로 페이지는 가로 용지로. 인쇄하기 전에 쓰면 좋아.</div>`,
+    <div class="row"><label>용지</label><select id="fPaper"><option value="A4">A4 (210×297mm)</option><option value="A3">A3 (297×420mm)</option><option value="B5">B5 (176×250mm)</option><option value="Letter">Letter</option></select></div>`,
   [...(c.on ? [{ label: '원래 크기로', run: () => { pushUndo(); S.settings.fit.on = false; render(); } }] : []), { label: '취소' },
     { label: '적용', primary: true, run: () => { pushUndo(); S.settings.fit = { on: true, paper: dv('fPaper').value }; render(); toast(`저장할 때 ${S.settings.fit.paper}로 맞춰`); } }]);
   dv('fPaper').value = c.paper;

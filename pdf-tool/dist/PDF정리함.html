@@ -78,7 +78,7 @@ kbd{font:11px/1 inherit;color:var(--sub);border:1px solid var(--line);border-rad
 #empty{position:absolute;inset:0;display:flex;align-items:center;justify-content:center;padding:30px;pointer-events:none}
 #empty .drop{pointer-events:auto;text-align:center;border:2px dashed #b7bfcc;border-radius:16px;padding:48px 60px;background:rgba(255,255,255,.6)}
 #empty .big i{width:56px;height:56px;color:#9aa4b5}
-#empty .t1{font-size:17px;font-weight:700;margin:10px 0 4px}
+#empty .t1{font-size:17px;font-weight:700;margin:10px 0 18px}
 #empty .t2{color:var(--sub);margin-bottom:18px}
 #empty .tb{height:38px;padding:0 20px;font-size:14px}
 body.dragfile #gridWrap{outline:3px dashed var(--accent);outline-offset:-8px}
@@ -168,7 +168,7 @@ body.mode-img #bar .group, body.mode-img #bar .spacer, body.mode-img #sub, body.
 #icEmpty{position:absolute;inset:0;display:flex;align-items:center;justify-content:center;padding:30px}
 #icEmpty .drop{text-align:center;border:2px dashed #b7bfcc;border-radius:16px;padding:48px 60px;background:rgba(255,255,255,.6)}
 #icEmpty .big i{width:56px;height:56px;color:#9aa4b5}
-#icEmpty .t1{font-size:17px;font-weight:700;margin:10px 0 4px}
+#icEmpty .t1{font-size:17px;font-weight:700;margin:10px 0 18px}
 #icEmpty .t2{color:var(--sub);margin-bottom:18px}
 #icEmpty .tb{height:38px;padding:0 20px;font-size:14px}
 body.dragfile #icWrap{outline:3px dashed var(--accent);outline-offset:-8px}
@@ -226,7 +226,6 @@ body.mode-img #bar .save{display:none}
         <button id="mInsFile">PDF·이미지 파일 삽입…</button>
         <button id="mInsBlank">빈 페이지 삽입</button>
         <button id="mInsDup">선택 페이지 복제 <kbd>Ctrl+D</kbd></button>
-        <div class="hint">선택한 페이지 뒤에 들어가. 선택이 없으면 맨 끝.</div>
       </div>
     </div>
   </div>
@@ -303,23 +302,12 @@ body.mode-img #bar .save{display:none}
   <aside id="side">
     <div class="side-h">열린 파일</div>
     <div id="srcList"></div>
-    <div class="side-help">
-      <b>사용법</b>
-      <div>클릭: 선택 · Ctrl+클릭: 추가 선택</div>
-      <div>Shift+클릭: 범위 선택</div>
-      <div>끌어서 순서 바꾸기</div>
-      <div>더블클릭: 크게 보기</div>
-      <div>파일을 끌어다 놓으면 그 자리에 삽입</div>
-      <div>Del 삭제 · L/R 회전</div>
-      <div>Ctrl+Z 되돌리기 · Ctrl+S 저장</div>
-    </div>
   </aside>
   <section id="gridWrap">
     <div id="empty">
       <div class="drop">
         <div class="big"><i data-i="open"></i></div>
-        <div class="t1">PDF나 이미지를 여기로 끌어다 놓기</div>
-        <div class="t2">여러 개를 한 번에 넣으면 이름순으로 합쳐져</div>
+        <div class="t1">PDF를 여기로 끌어다 놓기</div>
         <button id="bOpen2" class="tb primary">파일 열기</button>
       </div>
     </div>
@@ -330,22 +318,20 @@ body.mode-img #bar .save{display:none}
 
 <main id="imgMain" hidden>
   <aside class="iside">
-    <div class="side-h">저장 설정</div>
-    <div class="ifield"><label>최대 크기 (긴 변)</label><select id="mPx">
-      <option value="0">원래 크기 유지</option><option value="3000">3000px (인쇄용)</option><option value="2000" selected>2000px (보통, 추천)</option><option value="1280">1280px (메일·메신저용)</option><option value="800">800px (아주 작게)</option></select></div>
-    <div class="ifield"><label>화질 <span id="mQV">75%</span></label><input type="range" id="mQ" min="40" max="95" step="5" value="75"></div>
-    <div class="ifield"><label>저장 형식</label><select id="mFmt"><option value="jpg">JPG (사진, 가장 작음)</option><option value="png">PNG (글자·캡처 선명, 투명 유지)</option><option value="webp">WebP (더 작지만 일부 프로그램 미지원)</option><option value="keep">원래 형식 유지</option></select></div>
+    <div class="side-h">저장</div>
+    <div class="ifield"><label>크기</label><select id="mPx">
+      <option value="0" selected>원본 크기</option><option value="3000">긴 변 3000px</option><option value="2000">긴 변 2000px</option><option value="1280">긴 변 1280px</option><option value="800">긴 변 800px</option></select></div>
+    <div class="ifield"><label>화질 <span id="mQV">100%</span></label><input type="range" id="mQ" min="40" max="100" step="5" value="100"></div>
+    <div class="ifield"><label>형식</label><select id="mFmt"><option value="keep" selected>원본 형식</option><option value="jpg">JPG</option><option value="png">PNG</option><option value="webp">WebP</option></select></div>
     <div class="icsum" id="icSum">이미지를 올려줘</div>
     <button id="icSave" class="tb primary big" disabled><i data-i="save"></i><span>저장</span></button>
-    <div class="desc">설정을 바꾸면 예상 용량이 바로 바뀌어. 여러 장이면 ZIP 하나로 받아. 원본 파일은 안 바뀌고, 저장한 파일엔 위치정보 같은 사진 정보(EXIF)가 빠져.</div>
   </aside>
   <section id="icWrap">
     <div id="isub">
       <button class="chip" id="iAll">전체 선택</button><button class="chip" id="iNone">선택 해제</button>
-      <span id="iInfo" class="muted"></span><span class="spacer"></span>
-      <span class="muted">더블클릭: 그림판 편집 · 끌어서 순서 바꾸기</span>
+      <span id="iInfo" class="muted"></span>
     </div>
-    <div id="icEmpty"><div class="drop"><div class="big"><i data-i="image"></i></div><div class="t1">이미지를 여기로 끌어다 놓기</div><div class="t2">JPG·PNG·WebP·GIF·BMP 여러 장 한 번에</div><button id="icAdd2" class="tb primary">이미지 추가</button></div></div>
+    <div id="icEmpty"><div class="drop"><div class="big"><i data-i="image"></i></div><div class="t1">이미지를 여기로 끌어다 놓기</div><button id="icAdd2" class="tb primary">이미지 추가</button></div></div>
     <div id="icList"></div>
   </section>
 </main>
@@ -391,7 +377,6 @@ body.mode-img #bar .save{display:none}
     <button class="tb primary" id="eDone">완료</button>
   </div>
   <div class="v-body" id="eBody"><div id="eStage"><canvas id="eCanvas"></canvas><canvas id="eOver"></canvas></div></div>
-  <div class="ehint" id="eHint"></div>
 </div>
 
 <footer id="status"><span id="stTotal"></span><span id="stSel"></span><span class="spacer"></span><span id="stMsg"></span></footer>
@@ -852,7 +837,7 @@ function removePages(uids) {
   const first = S.pages.findIndex((p) => set.has(p.uid));
   S.pages = S.pages.filter((p) => !set.has(p.uid));
   S.sel = new Set(S.pages[Math.min(first, S.pages.length - 1)] ? [S.pages[Math.min(first, S.pages.length - 1)].uid] : []);
-  render(); toast(`${set.size}쪽 삭제 (Ctrl+Z로 되돌리기)`);
+  render(); toast(`${set.size}쪽 삭제`);
 }
 function duplicate() {
   const idx = selectedIdx(); if (!idx.length) return;
@@ -1049,8 +1034,7 @@ function openSplit() {
       <label><input type="radio" name="sm" value="ranges"> 범위 직접 입력 <input type="text" id="spR" placeholder="예: 1-3, 4-10, 11-" style="flex:1"></label>
       <label><input type="radio" name="sm" value="src"> 원래 파일별로 나누기 (병합 전 상태로)</label>
     </div>
-    <div class="row"><label>받는 방식</label><select id="spOut"><option value="zip">ZIP 하나로 묶어서</option><option value="multi">파일 여러 개로 각각</option></select></div>
-    <div class="desc">회전·쪽번호·워터마크 설정도 그대로 적용돼. "파일 여러 개"는 크롬이 여러 파일 다운로드 허용할지 물어볼 수 있어.</div>`,
+    <div class="row"><label>받는 방식</label><select id="spOut"><option value="zip">ZIP 하나로 묶어서</option><option value="multi">파일 여러 개로 각각</option></select></div>`,
   [{ label: '취소' }, { label: '분할 저장', primary: true, run: async () => {
     const mode = $('#dlgBody').querySelector('input[name=sm]:checked').value; let groups;
     if (mode === 'each') groups = S.pages.map((_, i) => [i + 1]);
@@ -1192,8 +1176,7 @@ function openCompPdf() {
     <div class="radio">
       <label><input type="radio" name="cm" value="img" checked> 그림만 줄이기 (글자·표는 그대로, 추천)</label>
       <label><input type="radio" name="cm" value="raster"> 페이지 전체를 이미지로 (가장 작아지지만 글자 복사·검색 안 됨)</label>
-    </div>
-    <div class="desc">지금 화면의 문서(회전·쪽번호 등 반영)를 줄여서 "_압축"을 붙여 저장해. 사진·스캔이 많은 PDF일수록 많이 줄어. 글자만 있는 문서는 거의 안 줄어.</div>`,
+    </div>`,
   [{ label: '취소' }, { label: '줄여서 저장', primary: true, run: async () => {
     const lv = LEVELS[dv('cLv').value]; const raster = $('#dlgBody').querySelector('input[name=cm]:checked').value === 'raster';
     closeDialog(); await compressAndSave(lv, raster);
@@ -1225,8 +1208,7 @@ function openImg() {
       <label><input type="radio" name="ir" value="all" ${k ? '' : 'checked'}> 전체 페이지 (${n}쪽)</label>
     </div>
     <div class="row"><label>형식</label><select id="iFmt"><option value="jpg">JPG (용량 작음)</option><option value="png">PNG (글자 선명, 용량 큼)</option></select></div>
-    <div class="row"><label>화질</label><select id="iDpi"><option value="96">보통 (화면용, 96dpi)</option><option value="150" selected>좋음 (150dpi)</option><option value="300">인쇄용 (300dpi)</option></select></div>
-    <div class="desc">회전·쪽번호·워터마크도 그대로 들어가. 여러 장이면 ZIP 하나로 받아.</div>`,
+    <div class="row"><label>화질</label><select id="iDpi"><option value="96">보통 (화면용, 96dpi)</option><option value="150" selected>좋음 (150dpi)</option><option value="300">인쇄용 (300dpi)</option></select></div>`,
   [{ label: '취소' }, { label: '이미지 저장', primary: true, run: async () => {
     const all = $('#dlgBody').querySelector('input[name=ir]:checked').value === 'all';
     const idx = all ? S.pages.map((_, i) => i) : selectedIdx();
@@ -1283,13 +1265,12 @@ function openNum() {
     <div class="row"><label>시작 번호</label><input type="number" id="nStart" min="0" value="${c.start}"></div>
     <div class="row"><label>글자 크기</label><input type="range" id="nSize" min="6" max="24" value="${c.size}"><span class="val" id="nSizeV">${c.size}pt</span></div>
     <div class="row"><label>여백</label><input type="range" id="nMargin" min="8" max="72" value="${c.margin}"><span class="val" id="nMarginV">${c.margin}pt</span></div>
-    <label style="display:flex;gap:8px;align-items:center"><input type="checkbox" id="nSkip" ${c.skipFirst ? 'checked' : ''}> 첫 페이지(표지)에는 안 넣기</label>
-    <div class="desc">저장할 때 모든 페이지에 들어가. 썸네일에서 미리 볼 수 있어.</div>`,
+    <label style="display:flex;gap:8px;align-items:center"><input type="checkbox" id="nSkip" ${c.skipFirst ? 'checked' : ''}> 첫 페이지(표지)에는 안 넣기</label>`,
   [...(c.on ? [{ label: '쪽번호 끄기', run: () => { pushUndo(); S.settings.num.on = false; render(); } }] : []), { label: '취소' },
     { label: '적용', primary: true, run: () => {
       pushUndo();
       S.settings.num = { on: true, pos: $('#numPos .on').dataset.pos, fmt: dv('nFmt').value, start: parseInt(dv('nStart').value) || 1, size: +dv('nSize').value, margin: +dv('nMargin').value, skipFirst: dv('nSkip').checked };
-      render(); toast('쪽번호 적용 (저장할 때 들어가)');
+      render(); toast('쪽번호 적용');
     } }]);
   dv('nFmt').value = c.fmt;
   $('#numPos').onclick = (e) => { const b = e.target.closest('button'); if (!b) return; $$('#numPos button').forEach((x) => x.classList.toggle('on', x === b)); };
@@ -1303,13 +1284,12 @@ function openWm() {
     <div class="row"><label>방향</label><select id="wAng"><option value="diag">대각선</option><option value="flat">가로</option></select></div>
     <div class="row"><label>색</label><select id="wColor"><option value="#808080">회색</option><option value="#d02020">빨강</option><option value="#2050c0">파랑</option><option value="#000000">검정</option></select></div>
     <div class="row"><label>크기</label><input type="range" id="wSize" min="15" max="100" value="${c.size}"><span class="val" id="wSizeV">${c.size}%</span></div>
-    <div class="row"><label>진하기</label><input type="range" id="wOp" min="5" max="60" value="${Math.round(c.opacity * 100)}"><span class="val" id="wOpV">${Math.round(c.opacity * 100)}%</span></div>
-    <div class="desc">저장할 때 모든 페이지 가운데에 들어가.</div>`,
+    <div class="row"><label>진하기</label><input type="range" id="wOp" min="5" max="60" value="${Math.round(c.opacity * 100)}"><span class="val" id="wOpV">${Math.round(c.opacity * 100)}%</span></div>`,
   [...(c.on ? [{ label: '워터마크 끄기', run: () => { pushUndo(); S.settings.wm.on = false; render(); } }] : []), { label: '취소' },
     { label: '적용', primary: true, run: () => {
       const text = dv('wText').value.trim(); if (!text) { toast('글자를 입력해', true); return false; }
       pushUndo(); S.settings.wm = { on: true, text, angle: dv('wAng').value, color: dv('wColor').value, size: +dv('wSize').value, opacity: +dv('wOp').value / 100 };
-      render(); toast('워터마크 적용 (저장할 때 들어가)');
+      render(); toast('워터마크 적용');
     } }]);
   dv('wAng').value = c.angle; dv('wColor').value = c.color;
   dv('wSize').oninput = (e) => (dv('wSizeV').textContent = e.target.value + '%');
@@ -1318,8 +1298,7 @@ function openWm() {
 function openFit() {
   const c = S.settings.fit;
   dialog('페이지 크기 맞추기', `
-    <div class="row"><label>용지</label><select id="fPaper"><option value="A4">A4 (210×297mm)</option><option value="A3">A3 (297×420mm)</option><option value="B5">B5 (176×250mm)</option><option value="Letter">Letter</option></select></div>
-    <div class="desc">크기가 제각각인 페이지를 전부 같은 용지 크기로 맞춰 (비율 유지, 가운데 정렬). 가로 페이지는 가로 용지로. 인쇄하기 전에 쓰면 좋아.</div>`,
+    <div class="row"><label>용지</label><select id="fPaper"><option value="A4">A4 (210×297mm)</option><option value="A3">A3 (297×420mm)</option><option value="B5">B5 (176×250mm)</option><option value="Letter">Letter</option></select></div>`,
   [...(c.on ? [{ label: '원래 크기로', run: () => { pushUndo(); S.settings.fit.on = false; render(); } }] : []), { label: '취소' },
     { label: '적용', primary: true, run: () => { pushUndo(); S.settings.fit = { on: true, paper: dv('fPaper').value }; render(); toast(`저장할 때 ${S.settings.fit.paper}로 맞춰`); } }]);
   dv('fPaper').value = c.paper;
@@ -1543,7 +1522,7 @@ Object.assign(ICONS, {
 $$('i[data-i]').forEach((el) => { if (!el.querySelector('svg *')) el.innerHTML = icon(el.dataset.i); });
 
 S.mode = 'pdf';
-S.imgOpts = { px: 2000, q: 0.75, fmt: 'jpg' };
+S.imgOpts = { px: 0, q: 1, fmt: 'keep' };
 const IC = { items: [], sel: new Set(), anchor: null, seq: 0, timer: null, run: 0, undo: [], redo: [] };
 window.IC = IC;
 const optKey = (o) => `${o.px}|${o.q}|${o.fmt}`;
@@ -1612,7 +1591,7 @@ async function applyEach(label, fn) {
       next.push(withBlob(it, blob, c.width, c.height)); c.width = c.height = 0;
     }
     pushIUndo(); IC.items = next; scheduleEstimate();
-    toast(`${list.length}장 ${label}` + (IC.sel.size ? '' : ' (선택이 없어서 전체에 적용)'));
+    toast(`${list.length}장 ${label}`);
   } catch (e) { console.error(e); toast(label + ' 실패: ' + e.message, true); }
   finally { unbusy(); }
 }
@@ -1651,15 +1630,16 @@ function renderIc() {
   const pct = Math.round((1 - after / Math.max(1, before)) * 100);
   $('#icSum').innerHTML = !IC.items.length ? '이미지를 올려줘' : pending.length
     ? `${IC.items.length}장 · 원본 ${fmtSize(before)}<br><span class="muted">예상 용량 계산 중… (${IC.items.length - pending.length}/${IC.items.length})</span>`
-    : `${IC.items.length}장 · 원본 ${fmtSize(before)} → <b>${fmtSize(after)}</b><br>${pct >= 0 ? `<span class="good">${pct}% 줄어듦</span>` : `<span class="muted">${-pct}% 늘어남</span>`}`;
+    : after === before ? `${IC.items.length}장 · <b>${fmtSize(before)}</b>`
+    : `${IC.items.length}장 · ${fmtSize(before)} → <b>${fmtSize(after)}</b><br>${pct >= 0 ? `<span class="good">${pct}% 줄어듦</span>` : `<span class="muted">${-pct}% 늘어남</span>`}`;
   $('#icSave').disabled = !IC.items.length;
-  $('#iInfo').textContent = IC.sel.size ? `${IC.sel.size}장 선택됨 · 버튼은 선택한 것에만 적용` : `${IC.items.length}장 · 선택 안 하면 버튼은 전체에 적용`;
+  $('#iInfo').textContent = IC.sel.size ? `${IC.sel.size}장 선택됨` : `${IC.items.length}장`;
   ['#iRotL', '#iRotR', '#iFlipH', '#iFlipV', '#iDel', '#iEdit', '#iResize', '#iJoin', '#iText', '#iRename', '#iPdf'].forEach((s) => ($(s).disabled = !IC.items.length));
   $('#iUndo').disabled = !IC.undo.length; $('#iRedo').disabled = !IC.redo.length;
 }
 function renderSel() { // 선택만 바뀔 때는 카드를 다시 만들지 않음 (더블클릭 유지)
   $$('#icList .iccard').forEach((c) => c.classList.toggle('sel', IC.sel.has(+c.dataset.id)));
-  $('#iInfo').textContent = IC.sel.size ? `${IC.sel.size}장 선택됨 · 버튼은 선택한 것에만 적용` : `${IC.items.length}장 · 선택 안 하면 버튼은 전체에 적용`;
+  $('#iInfo').textContent = IC.sel.size ? `${IC.sel.size}장 선택됨` : `${IC.items.length}장`;
 }
 function scheduleEstimate() { clearTimeout(IC.timer); renderIc(); IC.timer = setTimeout(estimate, 250); }
 
@@ -1722,8 +1702,7 @@ function openResize() {
       <label><input type="radio" name="rz" value="box"> 정확히 <input type="number" id="rzW" value="1080" min="1" style="width:70px"> × <input type="number" id="rzH" value="1080" min="1" style="width:70px"> px</label>
     </div>
     <div class="row"><label>정확히 맞출 때</label><select id="rzFit"><option value="cover">꽉 채우고 넘치는 부분 자르기</option><option value="contain">다 보이게 넣고 여백 채우기</option><option value="stretch">비율 무시하고 늘리기</option></select></div>
-    <div class="row"><label>여백 색</label><select id="rzBg"><option value="#ffffff">흰색</option><option value="#000000">검정</option><option value="transparent">투명 (PNG로 저장할 때)</option></select></div>
-    <div class="desc">자주 쓰는 크기: 증명사진 3×4cm(300dpi) = 354×472, 인스타 1080×1080, 유튜브 썸네일 1280×720.</div>`,
+    <div class="row"><label>여백 색</label><select id="rzBg"><option value="#ffffff">흰색</option><option value="#000000">검정</option><option value="transparent">투명 (PNG로 저장할 때)</option></select></div>`,
   [{ label: '취소' }, { label: '적용', primary: true, run: async () => {
     const mode = $('#dlgBody').querySelector('input[name=rz]:checked').value;
     const pct = +dv('rzPct').value / 100, L = +dv('rzLong').value, W = +dv('rzW').value, H = +dv('rzH').value, fit = dv('rzFit').value, bg = dv('rzBg').value;
@@ -1752,8 +1731,7 @@ function openJoin() {
     <div class="row" id="jColsRow"><label>한 줄에</label><input type="number" id="jCols" value="2" min="1" max="20"> <span class="muted">장</span></div>
     <div class="row"><label>크기 맞추기</label><select id="jFit"><option value="1">높이(세로 배치면 너비)를 맞춤</option><option value="0">원래 크기 그대로</option></select></div>
     <div class="row"><label>간격</label><input type="range" id="jGap" min="0" max="80" value="10"><span class="val" id="jGapV">10px</span></div>
-    <div class="row"><label>바탕색</label><select id="jBg"><option value="#ffffff">흰색</option><option value="#000000">검정</option><option value="#f0f0f0">연회색</option><option value="transparent">투명</option></select></div>
-    <div class="desc">목록 순서대로 붙어. 순서는 카드를 끌어서 바꿀 수 있어. 결과는 새 이미지로 목록 끝에 추가돼.</div>`,
+    <div class="row"><label>바탕색</label><select id="jBg"><option value="#ffffff">흰색</option><option value="#000000">검정</option><option value="#f0f0f0">연회색</option><option value="transparent">투명</option></select></div>`,
   [{ label: '취소' }, { label: '붙이기', primary: true, run: async () => {
     const o = { dir: dv('jDir').value, cols: Math.max(1, +dv('jCols').value || 2), fit: dv('jFit').value === '1', gap: +dv('jGap').value, bg: dv('jBg').value };
     closeDialog(); await doJoin(list, o);
@@ -1809,8 +1787,7 @@ function openText() {
     <div class="row"><label>위치</label><div class="poss" id="tPos">${[['tl', '왼쪽 위'], ['tc', '가운데 위'], ['tr', '오른쪽 위'], ['cc', '한가운데'], ['dg', '대각선'], ['cl', ''], ['bl', '왼쪽 아래'], ['bc', '가운데 아래'], ['br', '오른쪽 아래']].filter((x) => x[1]).map(([k, t]) => `<button type="button" data-pos="${k}" class="${k === 'br' ? 'on' : ''}">${t}</button>`).join('')}</div></div>
     <div class="row"><label>크기</label><input type="range" id="tSize" min="2" max="30" value="5"><span class="val" id="tSizeV">5%</span></div>
     <div class="row"><label>색</label><select id="tColor"><option value="#ffffff">흰색 (그림자)</option><option value="#000000">검정</option><option value="#e53935">빨강</option><option value="#808080">회색</option></select></div>
-    <div class="row"><label>진하기</label><input type="range" id="tOp" min="10" max="100" value="90"><span class="val" id="tOpV">90%</span></div>
-    <div class="desc">크기는 사진 너비 대비 글자 높이야. 대각선은 가운데에 크게 비스듬히 들어가는 워터마크.</div>`,
+    <div class="row"><label>진하기</label><input type="range" id="tOp" min="10" max="100" value="90"><span class="val" id="tOpV">90%</span></div>`,
   [{ label: '취소' }, { label: '넣기', primary: true, run: async () => {
     const text = dv('tText').value.trim(); if (!text) { toast('글자를 입력해줘', true); return false; }
     const o = { text, pos: $('#tPos .on').dataset.pos, size: +dv('tSize').value / 100, color: dv('tColor').value, op: +dv('tOp').value / 100 };
@@ -1851,7 +1828,7 @@ function openRename() {
   [{ label: '원래 이름으로', run: () => { pushIUndo(); const ids = new Set(list.map((x) => x.id)); IC.items = IC.items.map((it) => ids.has(it.id) ? { ...it, name: baseName(it.file.name) } : it); scheduleEstimate(); } },
     { label: '취소' }, { label: '바꾸기', primary: true, run: () => {
       const names = makeNames(list); pushIUndo(); const m = new Map(list.map((x, i) => [x.id, names[i]]));
-      IC.items = IC.items.map((it) => m.has(it.id) ? { ...it, name: m.get(it.id) } : it); scheduleEstimate(); toast(`${list.length}장 이름 바꿈 (저장할 때 이 이름으로 나와)`);
+      IC.items = IC.items.map((it) => m.has(it.id) ? { ...it, name: m.get(it.id) } : it); scheduleEstimate(); toast(`${list.length}장 이름 바꿈`);
     } }]);
   const makeNames = (l) => l.map((it, i) => {
     const pre = dv('nmPre').value, suf = dv('nmSuf').value;
@@ -1869,7 +1846,7 @@ async function toPdf() {
   setMode('pdf');
   await importFiles(files, S.pages.length ? S.pages.length : null, true);
   if (!$('#fname').value || $('#fname').value.endsWith('_편집')) $('#fname').value = safeName(list[0].name) + (list.length > 1 ? `_외${list.length - 1}장` : '');
-  toast(`${list.length}장을 PDF 편집 탭에 넣었어. 저장 누르면 PDF로 나와`);
+  toast(`${list.length}장을 PDF 편집 탭에 넣음`);
 }
 
 // ---------- 선택·끌기 ----------
@@ -1884,7 +1861,7 @@ function iSelectClick(id, e) {
 }
 function iRemove(ids) {
   const set = new Set(ids || [...IC.sel]); if (!set.size) return;
-  pushIUndo(); IC.items = IC.items.filter((x) => !set.has(x.id)); IC.sel.clear(); scheduleEstimate(); toast(`${set.size}장 뺌 (Ctrl+Z로 되돌리기)`);
+  pushIUndo(); IC.items = IC.items.filter((x) => !set.has(x.id)); IC.sel.clear(); scheduleEstimate(); toast(`${set.size}장 뺌`);
 }
 async function iRotateOne(id, deg) {
   const it = IC.items.find((x) => x.id === id); if (!it) return;
@@ -1968,11 +1945,6 @@ const eCanvas = $('#eCanvas'), eOver = $('#eOver'), eStage = $('#eStage'), eBody
 const eg = eCanvas.getContext('2d'), og = eOver.getContext('2d');
 const SWATCH = ['#e53935', '#fb8c00', '#fdd835', '#43a047', '#1e88e5', '#8e24aa', '#000000', '#ffffff'];
 $('#eSw').innerHTML = SWATCH.map((c) => `<button type="button" data-c="${c}" style="background:${c}" title="${c}"></button>`).join('');
-const TOOL_HINT = {
-  pen: '끌어서 자유롭게 그리기', hl: '끌어서 형광펜 칠하기 (반투명)', line: '끌어서 직선 (Shift: 수평·수직)', arrow: '끌어서 화살표 그리기',
-  rect: '끌어서 네모 (채우기 체크하면 칠한 네모)', ellipse: '끌어서 동그라미', text: '글자 넣을 곳을 클릭 → 입력하고 Enter (줄바꿈은 Shift+Enter)',
-  mosaic: '가릴 부분을 끌어서 모자이크', cover: '가릴 부분을 끌어서 칠한 네모로 덮기', eraser: '끌어서 내가 그린 것만 지우기 (사진은 안 지워져)', crop: '남길 부분을 끌어서 고르고 "자르기 적용"',
-};
 
 async function openEditor(id) {
   const it = IC.items.find((x) => x.id === id); if (!it) return;
@@ -2006,7 +1978,6 @@ function setTool(t) {
   $('#oRatio').style.display = t === 'crop' ? '' : 'none';
   $('#eCropApply').hidden = true;
   $('#eSw').style.display = $('#eColor').style.display = ['mosaic', 'eraser', 'crop'].includes(t) ? 'none' : '';
-  $('#eHint').textContent = TOOL_HINT[t] || '';
   eOver.style.cursor = t === 'text' ? 'text' : 'crosshair';
 }
 function setColor(c) { ED.color = c; $('#eColor').value = c; $$('#eSw button').forEach((b) => b.classList.toggle('on', b.dataset.c === c)); }
@@ -2140,7 +2111,7 @@ $('#eDone').onclick = async () => {
   try {
     const blob = await blobOf(eCanvas, workType(it), 0.95);
     pushIUndo(); IC.items = IC.items.map((x) => x.id === it.id ? withBlob(x, blob, eCanvas.width, eCanvas.height) : x);
-    closeEditor(); scheduleEstimate(); toast('편집 적용됨 (목록에서 Ctrl+Z로 되돌릴 수 있어)');
+    closeEditor(); scheduleEstimate(); toast('편집 적용됨');
   } finally { unbusy(); }
 };
 function edKey(e, ctrl, k, typing) {

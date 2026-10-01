@@ -20,7 +20,7 @@ Object.assign(ICONS, {
 $$('i[data-i]').forEach((el) => { if (!el.querySelector('svg *')) el.innerHTML = icon(el.dataset.i); });
 
 S.mode = 'pdf';
-S.imgOpts = { px: 2000, q: 0.75, fmt: 'jpg' };
+S.imgOpts = { px: 0, q: 1, fmt: 'keep' };
 const IC = { items: [], sel: new Set(), anchor: null, seq: 0, timer: null, run: 0, undo: [], redo: [] };
 window.IC = IC;
 const optKey = (o) => `${o.px}|${o.q}|${o.fmt}`;
@@ -89,7 +89,7 @@ async function applyEach(label, fn) {
       next.push(withBlob(it, blob, c.width, c.height)); c.width = c.height = 0;
     }
     pushIUndo(); IC.items = next; scheduleEstimate();
-    toast(`${list.length}장 ${label}` + (IC.sel.size ? '' : ' (선택이 없어서 전체에 적용)'));
+    toast(`${list.length}장 ${label}`);
   } catch (e) { console.error(e); toast(label + ' 실패: ' + e.message, true); }
   finally { unbusy(); }
 }
@@ -128,15 +128,16 @@ function renderIc() {
   const pct = Math.round((1 - after / Math.max(1, before)) * 100);
   $('#icSum').innerHTML = !IC.items.length ? '이미지를 올려줘' : pending.length
     ? `${IC.items.length}장 · 원본 ${fmtSize(before)}<br><span class="muted">예상 용량 계산 중… (${IC.items.length - pending.length}/${IC.items.length})</span>`
-    : `${IC.items.length}장 · 원본 ${fmtSize(before)} → <b>${fmtSize(after)}</b><br>${pct >= 0 ? `<span class="good">${pct}% 줄어듦</span>` : `<span class="muted">${-pct}% 늘어남</span>`}`;
+    : after === before ? `${IC.items.length}장 · <b>${fmtSize(before)}</b>`
+    : `${IC.items.length}장 · ${fmtSize(before)} → <b>${fmtSize(after)}</b><br>${pct >= 0 ? `<span class="good">${pct}% 줄어듦</span>` : `<span class="muted">${-pct}% 늘어남</span>`}`;
   $('#icSave').disabled = !IC.items.length;
-  $('#iInfo').textContent = IC.sel.size ? `${IC.sel.size}장 선택됨 · 버튼은 선택한 것에만 적용` : `${IC.items.length}장 · 선택 안 하면 버튼은 전체에 적용`;
+  $('#iInfo').textContent = IC.sel.size ? `${IC.sel.size}장 선택됨` : `${IC.items.length}장`;
   ['#iRotL', '#iRotR', '#iFlipH', '#iFlipV', '#iDel', '#iEdit', '#iResize', '#iJoin', '#iText', '#iRename', '#iPdf'].forEach((s) => ($(s).disabled = !IC.items.length));
   $('#iUndo').disabled = !IC.undo.length; $('#iRedo').disabled = !IC.redo.length;
 }
 function renderSel() { // 선택만 바뀔 때는 카드를 다시 만들지 않음 (더블클릭 유지)
   $$('#icList .iccard').forEach((c) => c.classList.toggle('sel', IC.sel.has(+c.dataset.id)));
-  $('#iInfo').textContent = IC.sel.size ? `${IC.sel.size}장 선택됨 · 버튼은 선택한 것에만 적용` : `${IC.items.length}장 · 선택 안 하면 버튼은 전체에 적용`;
+  $('#iInfo').textContent = IC.sel.size ? `${IC.sel.size}장 선택됨` : `${IC.items.length}장`;
 }
 function scheduleEstimate() { clearTimeout(IC.timer); renderIc(); IC.timer = setTimeout(estimate, 250); }
 
@@ -199,8 +200,7 @@ function openResize() {
       <label><input type="radio" name="rz" value="box"> 정확히 <input type="number" id="rzW" value="1080" min="1" style="width:70px"> × <input type="number" id="rzH" value="1080" min="1" style="width:70px"> px</label>
     </div>
     <div class="row"><label>정확히 맞출 때</label><select id="rzFit"><option value="cover">꽉 채우고 넘치는 부분 자르기</option><option value="contain">다 보이게 넣고 여백 채우기</option><option value="stretch">비율 무시하고 늘리기</option></select></div>
-    <div class="row"><label>여백 색</label><select id="rzBg"><option value="#ffffff">흰색</option><option value="#000000">검정</option><option value="transparent">투명 (PNG로 저장할 때)</option></select></div>
-    <div class="desc">자주 쓰는 크기: 증명사진 3×4cm(300dpi) = 354×472, 인스타 1080×1080, 유튜브 썸네일 1280×720.</div>`,
+    <div class="row"><label>여백 색</label><select id="rzBg"><option value="#ffffff">흰색</option><option value="#000000">검정</option><option value="transparent">투명 (PNG로 저장할 때)</option></select></div>`,
   [{ label: '취소' }, { label: '적용', primary: true, run: async () => {
     const mode = $('#dlgBody').querySelector('input[name=rz]:checked').value;
     const pct = +dv('rzPct').value / 100, L = +dv('rzLong').value, W = +dv('rzW').value, H = +dv('rzH').value, fit = dv('rzFit').value, bg = dv('rzBg').value;
@@ -229,8 +229,7 @@ function openJoin() {
     <div class="row" id="jColsRow"><label>한 줄에</label><input type="number" id="jCols" value="2" min="1" max="20"> <span class="muted">장</span></div>
     <div class="row"><label>크기 맞추기</label><select id="jFit"><option value="1">높이(세로 배치면 너비)를 맞춤</option><option value="0">원래 크기 그대로</option></select></div>
     <div class="row"><label>간격</label><input type="range" id="jGap" min="0" max="80" value="10"><span class="val" id="jGapV">10px</span></div>
-    <div class="row"><label>바탕색</label><select id="jBg"><option value="#ffffff">흰색</option><option value="#000000">검정</option><option value="#f0f0f0">연회색</option><option value="transparent">투명</option></select></div>
-    <div class="desc">목록 순서대로 붙어. 순서는 카드를 끌어서 바꿀 수 있어. 결과는 새 이미지로 목록 끝에 추가돼.</div>`,
+    <div class="row"><label>바탕색</label><select id="jBg"><option value="#ffffff">흰색</option><option value="#000000">검정</option><option value="#f0f0f0">연회색</option><option value="transparent">투명</option></select></div>`,
   [{ label: '취소' }, { label: '붙이기', primary: true, run: async () => {
     const o = { dir: dv('jDir').value, cols: Math.max(1, +dv('jCols').value || 2), fit: dv('jFit').value === '1', gap: +dv('jGap').value, bg: dv('jBg').value };
     closeDialog(); await doJoin(list, o);
@@ -286,8 +285,7 @@ function openText() {
     <div class="row"><label>위치</label><div class="poss" id="tPos">${[['tl', '왼쪽 위'], ['tc', '가운데 위'], ['tr', '오른쪽 위'], ['cc', '한가운데'], ['dg', '대각선'], ['cl', ''], ['bl', '왼쪽 아래'], ['bc', '가운데 아래'], ['br', '오른쪽 아래']].filter((x) => x[1]).map(([k, t]) => `<button type="button" data-pos="${k}" class="${k === 'br' ? 'on' : ''}">${t}</button>`).join('')}</div></div>
     <div class="row"><label>크기</label><input type="range" id="tSize" min="2" max="30" value="5"><span class="val" id="tSizeV">5%</span></div>
     <div class="row"><label>색</label><select id="tColor"><option value="#ffffff">흰색 (그림자)</option><option value="#000000">검정</option><option value="#e53935">빨강</option><option value="#808080">회색</option></select></div>
-    <div class="row"><label>진하기</label><input type="range" id="tOp" min="10" max="100" value="90"><span class="val" id="tOpV">90%</span></div>
-    <div class="desc">크기는 사진 너비 대비 글자 높이야. 대각선은 가운데에 크게 비스듬히 들어가는 워터마크.</div>`,
+    <div class="row"><label>진하기</label><input type="range" id="tOp" min="10" max="100" value="90"><span class="val" id="tOpV">90%</span></div>`,
   [{ label: '취소' }, { label: '넣기', primary: true, run: async () => {
     const text = dv('tText').value.trim(); if (!text) { toast('글자를 입력해줘', true); return false; }
     const o = { text, pos: $('#tPos .on').dataset.pos, size: +dv('tSize').value / 100, color: dv('tColor').value, op: +dv('tOp').value / 100 };
@@ -328,7 +326,7 @@ function openRename() {
   [{ label: '원래 이름으로', run: () => { pushIUndo(); const ids = new Set(list.map((x) => x.id)); IC.items = IC.items.map((it) => ids.has(it.id) ? { ...it, name: baseName(it.file.name) } : it); scheduleEstimate(); } },
     { label: '취소' }, { label: '바꾸기', primary: true, run: () => {
       const names = makeNames(list); pushIUndo(); const m = new Map(list.map((x, i) => [x.id, names[i]]));
-      IC.items = IC.items.map((it) => m.has(it.id) ? { ...it, name: m.get(it.id) } : it); scheduleEstimate(); toast(`${list.length}장 이름 바꿈 (저장할 때 이 이름으로 나와)`);
+      IC.items = IC.items.map((it) => m.has(it.id) ? { ...it, name: m.get(it.id) } : it); scheduleEstimate(); toast(`${list.length}장 이름 바꿈`);
     } }]);
   const makeNames = (l) => l.map((it, i) => {
     const pre = dv('nmPre').value, suf = dv('nmSuf').value;
@@ -346,7 +344,7 @@ async function toPdf() {
   setMode('pdf');
   await importFiles(files, S.pages.length ? S.pages.length : null, true);
   if (!$('#fname').value || $('#fname').value.endsWith('_편집')) $('#fname').value = safeName(list[0].name) + (list.length > 1 ? `_외${list.length - 1}장` : '');
-  toast(`${list.length}장을 PDF 편집 탭에 넣었어. 저장 누르면 PDF로 나와`);
+  toast(`${list.length}장을 PDF 편집 탭에 넣음`);
 }
 
 // ---------- 선택·끌기 ----------
@@ -361,7 +359,7 @@ function iSelectClick(id, e) {
 }
 function iRemove(ids) {
   const set = new Set(ids || [...IC.sel]); if (!set.size) return;
-  pushIUndo(); IC.items = IC.items.filter((x) => !set.has(x.id)); IC.sel.clear(); scheduleEstimate(); toast(`${set.size}장 뺌 (Ctrl+Z로 되돌리기)`);
+  pushIUndo(); IC.items = IC.items.filter((x) => !set.has(x.id)); IC.sel.clear(); scheduleEstimate(); toast(`${set.size}장 뺌`);
 }
 async function iRotateOne(id, deg) {
   const it = IC.items.find((x) => x.id === id); if (!it) return;
@@ -445,11 +443,6 @@ const eCanvas = $('#eCanvas'), eOver = $('#eOver'), eStage = $('#eStage'), eBody
 const eg = eCanvas.getContext('2d'), og = eOver.getContext('2d');
 const SWATCH = ['#e53935', '#fb8c00', '#fdd835', '#43a047', '#1e88e5', '#8e24aa', '#000000', '#ffffff'];
 $('#eSw').innerHTML = SWATCH.map((c) => `<button type="button" data-c="${c}" style="background:${c}" title="${c}"></button>`).join('');
-const TOOL_HINT = {
-  pen: '끌어서 자유롭게 그리기', hl: '끌어서 형광펜 칠하기 (반투명)', line: '끌어서 직선 (Shift: 수평·수직)', arrow: '끌어서 화살표 그리기',
-  rect: '끌어서 네모 (채우기 체크하면 칠한 네모)', ellipse: '끌어서 동그라미', text: '글자 넣을 곳을 클릭 → 입력하고 Enter (줄바꿈은 Shift+Enter)',
-  mosaic: '가릴 부분을 끌어서 모자이크', cover: '가릴 부분을 끌어서 칠한 네모로 덮기', eraser: '끌어서 내가 그린 것만 지우기 (사진은 안 지워져)', crop: '남길 부분을 끌어서 고르고 "자르기 적용"',
-};
 
 async function openEditor(id) {
   const it = IC.items.find((x) => x.id === id); if (!it) return;
@@ -483,7 +476,6 @@ function setTool(t) {
   $('#oRatio').style.display = t === 'crop' ? '' : 'none';
   $('#eCropApply').hidden = true;
   $('#eSw').style.display = $('#eColor').style.display = ['mosaic', 'eraser', 'crop'].includes(t) ? 'none' : '';
-  $('#eHint').textContent = TOOL_HINT[t] || '';
   eOver.style.cursor = t === 'text' ? 'text' : 'crosshair';
 }
 function setColor(c) { ED.color = c; $('#eColor').value = c; $$('#eSw button').forEach((b) => b.classList.toggle('on', b.dataset.c === c)); }
@@ -617,7 +609,7 @@ $('#eDone').onclick = async () => {
   try {
     const blob = await blobOf(eCanvas, workType(it), 0.95);
     pushIUndo(); IC.items = IC.items.map((x) => x.id === it.id ? withBlob(x, blob, eCanvas.width, eCanvas.height) : x);
-    closeEditor(); scheduleEstimate(); toast('편집 적용됨 (목록에서 Ctrl+Z로 되돌릴 수 있어)');
+    closeEditor(); scheduleEstimate(); toast('편집 적용됨');
   } finally { unbusy(); }
 };
 function edKey(e, ctrl, k, typing) {

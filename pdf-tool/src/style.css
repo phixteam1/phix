@@ -68,7 +68,7 @@ kbd{font:11px/1 inherit;color:var(--sub);border:1px solid var(--line);border-rad
 #empty{position:absolute;inset:0;display:flex;align-items:center;justify-content:center;padding:30px;pointer-events:none}
 #empty .drop{pointer-events:auto;text-align:center;border:2px dashed #b7bfcc;border-radius:16px;padding:48px 60px;background:rgba(255,255,255,.6)}
 #empty .big i{width:56px;height:56px;color:#9aa4b5}
-#empty .t1{font-size:17px;font-weight:700;margin:10px 0 4px}
+#empty .t1{font-size:17px;font-weight:700;margin:10px 0 18px}
 #empty .t2{color:var(--sub);margin-bottom:18px}
 #empty .tb{height:38px;padding:0 20px;font-size:14px}
 body.dragfile #gridWrap{outline:3px dashed var(--accent);outline-offset:-8px}
@@ -158,7 +158,7 @@ body.mode-img #bar .group, body.mode-img #bar .spacer, body.mode-img #sub, body.
 #icEmpty{position:absolute;inset:0;display:flex;align-items:center;justify-content:center;padding:30px}
 #icEmpty .drop{text-align:center;border:2px dashed #b7bfcc;border-radius:16px;padding:48px 60px;background:rgba(255,255,255,.6)}
 #icEmpty .big i{width:56px;height:56px;color:#9aa4b5}
-#icEmpty .t1{font-size:17px;font-weight:700;margin:10px 0 4px}
+#icEmpty .t1{font-size:17px;font-weight:700;margin:10px 0 18px}
 #icEmpty .t2{color:var(--sub);margin-bottom:18px}
 #icEmpty .tb{height:38px;padding:0 20px;font-size:14px}
 body.dragfile #icWrap{outline:3px dashed var(--accent);outline-offset:-8px}

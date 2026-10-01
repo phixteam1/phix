@@ -21,7 +21,6 @@
         <button id="mInsFile">PDF·이미지 파일 삽입…</button>
         <button id="mInsBlank">빈 페이지 삽입</button>
         <button id="mInsDup">선택 페이지 복제 <kbd>Ctrl+D</kbd></button>
-        <div class="hint">선택한 페이지 뒤에 들어가. 선택이 없으면 맨 끝.</div>
       </div>
     </div>
   </div>
@@ -98,23 +97,12 @@
   <aside id="side">
     <div class="side-h">열린 파일</div>
     <div id="srcList"></div>
-    <div class="side-help">
-      <b>사용법</b>
-      <div>클릭: 선택 · Ctrl+클릭: 추가 선택</div>
-      <div>Shift+클릭: 범위 선택</div>
-      <div>끌어서 순서 바꾸기</div>
-      <div>더블클릭: 크게 보기</div>
-      <div>파일을 끌어다 놓으면 그 자리에 삽입</div>
-      <div>Del 삭제 · L/R 회전</div>
-      <div>Ctrl+Z 되돌리기 · Ctrl+S 저장</div>
-    </div>
   </aside>
   <section id="gridWrap">
     <div id="empty">
       <div class="drop">
         <div class="big"><i data-i="open"></i></div>
-        <div class="t1">PDF나 이미지를 여기로 끌어다 놓기</div>
-        <div class="t2">여러 개를 한 번에 넣으면 이름순으로 합쳐져</div>
+        <div class="t1">PDF를 여기로 끌어다 놓기</div>
         <button id="bOpen2" class="tb primary">파일 열기</button>
       </div>
     </div>
@@ -125,22 +113,20 @@
 
 <main id="imgMain" hidden>
   <aside class="iside">
-    <div class="side-h">저장 설정</div>
-    <div class="ifield"><label>최대 크기 (긴 변)</label><select id="mPx">
-      <option value="0">원래 크기 유지</option><option value="3000">3000px (인쇄용)</option><option value="2000" selected>2000px (보통, 추천)</option><option value="1280">1280px (메일·메신저용)</option><option value="800">800px (아주 작게)</option></select></div>
-    <div class="ifield"><label>화질 <span id="mQV">75%</span></label><input type="range" id="mQ" min="40" max="95" step="5" value="75"></div>
-    <div class="ifield"><label>저장 형식</label><select id="mFmt"><option value="jpg">JPG (사진, 가장 작음)</option><option value="png">PNG (글자·캡처 선명, 투명 유지)</option><option value="webp">WebP (더 작지만 일부 프로그램 미지원)</option><option value="keep">원래 형식 유지</option></select></div>
+    <div class="side-h">저장</div>
+    <div class="ifield"><label>크기</label><select id="mPx">
+      <option value="0" selected>원본 크기</option><option value="3000">긴 변 3000px</option><option value="2000">긴 변 2000px</option><option value="1280">긴 변 1280px</option><option value="800">긴 변 800px</option></select></div>
+    <div class="ifield"><label>화질 <span id="mQV">100%</span></label><input type="range" id="mQ" min="40" max="100" step="5" value="100"></div>
+    <div class="ifield"><label>형식</label><select id="mFmt"><option value="keep" selected>원본 형식</option><option value="jpg">JPG</option><option value="png">PNG</option><option value="webp">WebP</option></select></div>
     <div class="icsum" id="icSum">이미지를 올려줘</div>
     <button id="icSave" class="tb primary big" disabled><i data-i="save"></i><span>저장</span></button>
-    <div class="desc">설정을 바꾸면 예상 용량이 바로 바뀌어. 여러 장이면 ZIP 하나로 받아. 원본 파일은 안 바뀌고, 저장한 파일엔 위치정보 같은 사진 정보(EXIF)가 빠져.</div>
   </aside>
   <section id="icWrap">
     <div id="isub">
       <button class="chip" id="iAll">전체 선택</button><button class="chip" id="iNone">선택 해제</button>
-      <span id="iInfo" class="muted"></span><span class="spacer"></span>
-      <span class="muted">더블클릭: 그림판 편집 · 끌어서 순서 바꾸기</span>
+      <span id="iInfo" class="muted"></span>
     </div>
-    <div id="icEmpty"><div class="drop"><div class="big"><i data-i="image"></i></div><div class="t1">이미지를 여기로 끌어다 놓기</div><div class="t2">JPG·PNG·WebP·GIF·BMP 여러 장 한 번에</div><button id="icAdd2" class="tb primary">이미지 추가</button></div></div>
+    <div id="icEmpty"><div class="drop"><div class="big"><i data-i="image"></i></div><div class="t1">이미지를 여기로 끌어다 놓기</div><button id="icAdd2" class="tb primary">이미지 추가</button></div></div>
     <div id="icList"></div>
   </section>
 </main>
@@ -186,7 +172,6 @@
     <button class="tb primary" id="eDone">완료</button>
   </div>
   <div class="v-body" id="eBody"><div id="eStage"><canvas id="eCanvas"></canvas><canvas id="eOver"></canvas></div></div>
-  <div class="ehint" id="eHint"></div>
 </div>
 
 <footer id="status"><span id="stTotal"></span><span id="stSel"></span><span class="spacer"></span><span id="stMsg"></span></footer>
