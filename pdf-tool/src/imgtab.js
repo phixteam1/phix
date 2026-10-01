@@ -16,14 +16,15 @@ Object.assign(ICONS, {
   flipv: '<path d="M3 12h18M7 8l5-5 5 5zM7 16l5 5 5-5z"/>',
   join: '<rect x="3" y="5" width="8" height="14" rx="1"/><rect x="13" y="5" width="8" height="14" rx="1"/>',
   rename: '<path d="M4 7h10M4 12h7M4 17h6M15 19l1-4 5-5 3 3-5 5z"/>',
+  clock: '<circle cx="12" cy="12" r="8"/><path d="M12 8v4l3 2"/>',
 });
 $$('i[data-i]').forEach((el) => { if (!el.querySelector('svg *')) el.innerHTML = icon(el.dataset.i); });
 
 S.mode = 'pdf';
-S.imgOpts = { scale: 1, q: 1, fmt: 'keep' };
+S.imgOpts = { scale: 1, q: 1, fmt: 'keep', up: 1 };
 const IC = { items: [], sel: new Set(), anchor: null, seq: 0, timer: null, run: 0, undo: [], redo: [] };
 window.IC = IC;
-const optKey = (o) => `${o.scale}|${o.q}|${o.fmt}`;
+const optKey = (o) => `${o.scale}|${o.q}|${o.fmt}|${o.up}`;
 const esc = (t) => String(t).replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/"/g, '&quot;');
 const EXT = { 'image/jpeg': 'jpg', 'image/webp': 'webp', 'image/png': 'png' };
 
@@ -114,19 +115,19 @@ function renderIc() {
   const key = optKey(S.imgOpts);
   list.innerHTML = IC.items.map((it, i) => {
     const r = it.resKey === key ? it.res : null;
-    const after = r ? (r.err ? '<span class="bad">못 읽음</span>' : r.same ? '<span class="muted">그대로</span>' : `<b>${fmtSize(r.data.length)}</b> <span class="${r.data.length < it.file.size ? 'good' : 'muted'}">${r.data.length < it.file.size ? '-' + Math.round((1 - r.data.length / it.file.size) * 100) + '%' : '+' + Math.round((r.data.length / it.file.size - 1) * 100) + '%'}</span>`) : '<span class="muted">계산 중…</span>';
+    const after = r ? (r.err ? '<span class="bad">못 읽음</span>' : r.up ? '<span class="muted">—</span>' : r.same ? '<span class="muted">그대로</span>' : `<b>${fmtSize(r.data.length)}</b> <span class="${r.data.length < it.file.size ? 'good' : 'muted'}">${r.data.length < it.file.size ? '-' + Math.round((1 - r.data.length / it.file.size) * 100) + '%' : '+' + Math.round((r.data.length / it.file.size - 1) * 100) + '%'}</span>`) : '<span class="muted">계산 중…</span>';
     const outExt = r && !r.err ? (r.same ? (it.file.name.match(/\.[^.]+$/) || [''])[0] : '.' + EXT[r.type]) : '';
     return `<div class="iccard${IC.sel.has(it.id) ? ' sel' : ''}" data-id="${it.id}" draggable="true"><div class="ict"><img src="${it.url}" alt="" draggable="false"></div>
       <div class="htools"><button data-act="rotl" title="왼쪽 회전">${icon('rotl')}</button><button data-act="rotr" title="오른쪽 회전">${icon('rotr')}</button><button data-act="edit" title="편집">${icon('pen')}</button><button data-act="del" title="빼기">${icon('trash')}</button></div>
       <div class="nm" title="${esc(it.file.name)}"><span class="no">${i + 1}</span>${esc(it.name)}<span class="muted">${outExt}</span>${it.edited ? '<span class="tag">편집됨</span>' : ''}</div>
       <div class="sz">${fmtSize(it.file.size)} → ${after}</div><div class="muted dm">${r && !r.err ? `${r.w}×${r.h}` : `${it.w}×${it.h}`}</div></div>`;
   }).join('');
-  const done = IC.items.filter((it) => it.resKey === key && it.res && !it.res.err);
+  const done = IC.items.filter((it) => it.resKey === key && it.res && !it.res.err && !it.res.up);
   const pending = IC.items.filter((it) => !(it.resKey === key && it.res));
   const before = IC.items.reduce((a, it) => a + it.file.size, 0);
   const after = done.reduce((a, it) => a + (it.res.same ? it.file.size : it.res.data.length), 0);
   const pct = Math.round((1 - after / Math.max(1, before)) * 100);
-  $('#icSum').innerHTML = !IC.items.length ? '이미지를 올려줘' : pending.length
+  $('#icSum').innerHTML = !IC.items.length ? '이미지를 올려줘' : S.imgOpts.up > 1 ? `${IC.items.length}장 · <b>${fmtSize(before)}</b>` : pending.length
     ? `${IC.items.length}장 · 원본 ${fmtSize(before)}<br><span class="muted">예상 용량 계산 중… (${IC.items.length - pending.length}/${IC.items.length})</span>`
     : after === before ? `${IC.items.length}장 · <b>${fmtSize(before)}</b>`
     : `${IC.items.length}장 · ${fmtSize(before)} → <b>${fmtSize(after)}</b><br>${pct >= 0 ? `<span class="good">${pct}% 줄어듦</span>` : `<span class="muted">${-pct}% 늘어남</span>`}`;
@@ -142,25 +143,36 @@ function renderSel() { // 선택만 바뀔 때는 카드를 다시 만들지 않
 function scheduleEstimate() { clearTimeout(IC.timer); renderIc(); IC.timer = setTimeout(estimate, 250); }
 
 // ---------- 저장(용량·형식) ----------
-async function compressOne(it, o) {
-  const bmp = await createImageBitmap(it.blob);
+function outTypeOf(it, o) {
+  const ft = it.file.type;
+  return o.fmt === 'webp' ? 'image/webp' : o.fmt === 'png' ? 'image/png' : o.fmt === 'keep' && /(png|webp|jpeg)$/i.test(ft) ? ft : 'image/jpeg';
+}
+async function compressOne(it, o, up) { // up: { prog(p), stopped() } — 업스케일할 때만
+  let bmp = await createImageBitmap(it.blob);
+  if (o.up > 1) {
+    const big = await upscaleImage(bmp, o.up, up && up.prog, up ? up.stopped : () => false); bmp.close();
+    if (!big) return null;
+    bmp = big;
+  }
   const s = Math.min(1, o.scale || 1);
   const w = Math.max(1, Math.round(bmp.width * s)), h = Math.max(1, Math.round(bmp.height * s));
-  const ft = it.file.type;
-  const type = o.fmt === 'webp' ? 'image/webp' : o.fmt === 'png' ? 'image/png' : o.fmt === 'keep' && /(png|webp|jpeg)$/i.test(ft) ? ft : 'image/jpeg';
+  const ft = it.file.type; const type = outTypeOf(it, o);
   const c = newCanvas(w, h); const g = c.getContext('2d');
   if (type === 'image/jpeg') { g.fillStyle = '#fff'; g.fillRect(0, 0, w, h); }
-  g.imageSmoothingQuality = 'high'; g.drawImage(bmp, 0, 0, w, h); bmp.close();
+  g.imageSmoothingQuality = 'high'; g.drawImage(bmp, 0, 0, w, h);
+  if (bmp.close) bmp.close(); else bmp.width = bmp.height = 0;
   const data = new Uint8Array(await (await blobOf(c, type, o.q)).arrayBuffer()); c.width = c.height = 0;
   // 손대지 않았고 형식도 같은데 더 커지면 원본 그대로
-  if (!it.edited && type === ft && data.length >= it.file.size) return { same: true, type: ft, w: it.w, h: it.h };
+  if (o.up === 1 && !it.edited && type === ft && data.length >= it.file.size) return { same: true, type: ft, w: it.w, h: it.h };
   return { data, type, w, h };
 }
+const upPlan = (it, o) => { const s = Math.min(1, o.scale || 1); return { up: true, type: outTypeOf(it, o), w: Math.max(1, Math.round(it.w * o.up * s)), h: Math.max(1, Math.round(it.h * o.up * s)) }; };
 async function estimate() {
   const run = ++IC.run; const o = { ...S.imgOpts }; const key = optKey(o);
   for (const it of IC.items) {
     if (run !== IC.run || S.mode !== 'img') return;
     if (it.resKey === key) continue;
+    if (o.up > 1) { it.res = upPlan(it, o); it.resKey = key; renderIc(); continue; }
     try { it.res = await compressOne(it, o); } catch (e) { it.res = { err: true }; }
     if (run !== IC.run) return;
     it.resKey = key; renderIc();
@@ -170,10 +182,26 @@ async function saveCompImgs() {
   if (!IC.items.length) return;
   const o = { ...S.imgOpts }; const key = optKey(o); IC.run++;
   busy('저장 준비 중…'); await tick();
-  const out = [];
+  const out = []; const n = IC.items.length; let stop = false, upErr = '';
+  if (o.up > 1) { $('#busyStop').hidden = false; $('#busyStop').onclick = () => { stop = true; $('#busyMsg').textContent = '중지하는 중…'; }; }
   try {
-    for (let i = 0; i < IC.items.length; i++) {
-      const it = IC.items[i]; $('#busyMsg').textContent = `저장 준비 중… (${i + 1}/${IC.items.length})`; await tick();
+    if (o.up > 1 && !UP.eng) { $('#busyMsg').textContent = 'AI 준비 중…'; try { await upStart(); } catch (e) { toast(e.message, true); return; } }
+    for (let i = 0; i < n; i++) {
+      if (stop) break;
+      const it = IC.items[i]; const cnt = n > 1 ? ` (${i + 1}/${n})` : '';
+      $('#busyMsg').textContent = o.up > 1 ? `업스케일 중…${cnt} 0%` : `저장 준비 중…${cnt}`; await tick();
+      if (o.up > 1) {
+        let r = null;
+        try { r = await compressOne(it, o, { prog: (p) => { if (!stop) $('#busyMsg').textContent = `업스케일 중…${cnt} ${Math.floor(p * 100)}%`; }, stopped: () => stop }); }
+        catch (e) { upErr = e.message; r = { err: true }; }
+        if (!r) break;
+        it.res = r.err ? r : upPlan(it, o); it.resKey = key;
+        if (r.err) continue;
+        const name = safeName(it.name) + '.' + EXT[r.type];
+        let nm = name, k = 2; while (out.some((x) => x.name === nm)) nm = name.replace(/(\.[^.]+)$/, `(${k++})$1`);
+        out.push({ name: nm, data: r.data, type: r.type });
+        continue;
+      }
       if (it.resKey !== key) { try { it.res = await compressOne(it, o); } catch (e) { it.res = { err: true }; } it.resKey = key; }
       if (it.res.err) continue;
       const data = it.res.same ? new Uint8Array(await it.file.arrayBuffer()) : it.res.data;
@@ -182,9 +210,10 @@ async function saveCompImgs() {
       let nm = name, k = 2; while (out.some((x) => x.name === nm)) nm = name.replace(/(\.[^.]+)$/, `(${k++})$1`);
       out.push({ name: nm, data, type: it.res.same ? it.file.type : it.res.type });
     }
-  } finally { unbusy(); }
+  } finally { unbusy(); $('#busyStop').hidden = true; }
   renderIc();
-  if (!out.length) return toast('이미지를 읽지 못했어', true);
+  if (stop) return toast('중지했어');
+  if (!out.length) return toast(upErr || '이미지를 읽지 못했어', true);
   if (out.length === 1) download(out[0].data, out[0].name, out[0].type);
   else download(makeZip(out), safeName(IC.items[0].name) + `_외${out.length - 1}장.zip`, 'application/zip');
   toast(out.length === 1 ? '저장했어 (다운로드 폴더 확인)' : `${out.length}장을 ZIP으로 저장했어 (다운로드 폴더 확인)`);
@@ -408,7 +437,13 @@ iWrap.addEventListener('drop', (e) => {
 
 // ---------- 단추 연결 ----------
 $('.modes').onclick = (e) => { const b = e.target.closest('[data-mode]'); if (b) setMode(b.dataset.mode); };
-const imgOptChanged = () => { S.imgOpts = { scale: +$('#mPx').value / 100, q: +$('#mQ').value / 100, fmt: $('#mFmt').value }; $('#mQV').textContent = $('#mQ').value + '%'; $('#mPxV').textContent = $('#mPx').value + '%'; scheduleEstimate(); };
+const imgOptChanged = () => { S.imgOpts = { scale: +$('#mPx').value / 100, q: +$('#mQ').value / 100, fmt: $('#mFmt').value, up: S.imgOpts.up }; $('#mQV').textContent = $('#mQ').value + '%'; $('#mPxV').textContent = $('#mPx').value + '%'; scheduleEstimate(); };
+$('#mUp').onclick = (e) => {
+  const b = e.target.closest('[data-u]'); if (!b) return;
+  S.imgOpts.up = +b.dataset.u; $$('#mUp button').forEach((x) => x.classList.toggle('on', x === b)); $('#mUpT').hidden = S.imgOpts.up === 1;
+  if (S.imgOpts.up > 1) upStart().catch(() => {});
+  scheduleEstimate();
+};
 $('#mQ').oninput = imgOptChanged; $('#mPx').oninput = imgOptChanged; $('#mFmt').onchange = imgOptChanged;
 $('#iAdd').onclick = $('#icAdd2').onclick = () => $('#fileImgC').click();
 $('#fileImgC').onchange = (e) => { const f = [...e.target.files]; e.target.value = ''; imgAddFiles(f); };

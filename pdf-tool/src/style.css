@@ -201,3 +201,11 @@ body.mode-img #bar .save{display:none}
 #editor{z-index:95}
 .muted{color:var(--sub)} .good{color:#1f8a4c;font-weight:700} .bad{color:var(--danger)}
 .tb[hidden]{display:none}
+.seg{display:flex;border:1px solid var(--line);border-radius:6px;overflow:hidden;height:32px}
+.seg button{flex:1;border:none;background:#fff;cursor:pointer;border-left:1px solid var(--line)}
+.seg button:first-child{border-left:none}
+.seg button.on{background:var(--accent-soft);color:#1d4fc0;font-weight:700}
+.upslow{display:inline-flex;align-items:center;gap:3px;color:#b7791f;font-size:12px}
+.upslow i[data-i]{width:13px;height:13px}
+#busy .bx #busyStop{margin-left:6px;border-color:var(--line)}
+.upslow[hidden]{display:none}

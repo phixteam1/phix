@@ -23,7 +23,11 @@ parts = {
     '/*CMAPS*/': json.dumps(cmaps),
     '/*PDFJS*/': safe(rd('vendor', 'pdf.min.js')),
     '/*PDFLIB*/': safe(rd('vendor', 'pdf-lib.min.js')),
-    '/*APP*/': safe(rd('src', 'app.js') + '\n' + rd('src', 'imgtab.js')),
+    '/*ORT*/': safe(rd('..', 'upscale', 'vendor', 'ort.webgpu.bundle.min.mjs')),
+    '/*UPWORKER*/': safe(rd('..', 'upscale', 'src', 'worker.js')),
+    '/*WASM*/': base64.b64encode(open(os.path.join(H, '..', 'upscale', 'vendor', 'ort-wasm-simd-threaded.jsep.wasm.gz'), 'rb').read()).decode(),
+    '/*MODEL*/': base64.b64encode(open(os.path.join(H, '..', 'upscale', 'vendor', 'realesr-general-x4v3.onnx.gz'), 'rb').read()).decode(),
+    '/*APP*/': safe(rd('src', 'app.js') + '\n' + rd('src', 'imgtab.js') + '\n' + rd('src', 'upscale.js')),
 }
 for k, v in parts.items():
     assert html.count(k) == 1, k

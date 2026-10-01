@@ -114,6 +114,7 @@
 <main id="imgMain" hidden>
   <aside class="iside">
     <div class="side-h">저장</div>
+    <div class="ifield"><label>업스케일 <span id="mUpT" class="upslow" hidden><i data-i="clock"></i>저장 오래 걸림</span></label><div class="seg" id="mUp"><button data-u="1" class="on">안 함</button><button data-u="2">2×</button><button data-u="3">3×</button><button data-u="4">4×</button></div></div>
     <div class="ifield"><label>크기 <span id="mPxV">100%</span></label><input type="range" id="mPx" min="10" max="100" step="5" value="100"></div>
     <div class="ifield"><label>화질 <span id="mQV">100%</span></label><input type="range" id="mQ" min="40" max="100" step="5" value="100"></div>
     <div class="ifield"><label>형식</label><select id="mFmt"><option value="keep" selected>원본 형식</option><option value="jpg">JPG</option><option value="png">PNG</option><option value="webp">WebP</option></select></div>
@@ -201,9 +202,13 @@
   <div class="v-body" id="vBody"><canvas id="vCanvas"></canvas></div>
 </div>
 
-<div id="busy" hidden><div class="bx"><div class="spin"></div><div id="busyMsg">처리 중…</div></div></div>
+<div id="busy" hidden><div class="bx"><div class="spin"></div><div id="busyMsg">처리 중…</div><button id="busyStop" class="tb" hidden>중지</button></div></div>
 <div id="toast"></div>
 
+<script type="text/plain" id="ort-src">/*ORT*/</script>
+<script type="text/plain" id="up-worker">/*UPWORKER*/</script>
+<script type="text/plain" id="z-wasm">/*WASM*/</script>
+<script type="text/plain" id="z-model">/*MODEL*/</script>
 <script type="text/plain" id="pdfjs-worker">/*PDFJS_WORKER*/</script>
 <script type="text/plain" id="cmaps">/*CMAPS*/</script>
 <script>/*PDFJS*/</script>
