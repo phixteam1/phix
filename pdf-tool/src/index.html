@@ -12,7 +12,7 @@
 <body>
 <header id="bar">
   <div class="brand">PDF 정리함</div>
-  <div class="modes"><button data-mode="pdf" class="on">PDF 편집</button><button data-mode="img">이미지 줄이기</button></div>
+  <div class="modes"><button data-mode="pdf" class="on">PDF 편집</button><button data-mode="img">이미지 편집</button></div>
   <div class="group">
     <button id="bOpen" class="tb primary" title="파일 열기 (Ctrl+O)"><i data-i="open"></i><span>열기</span></button>
     <div class="dd">
@@ -44,6 +44,30 @@
     <button id="bNum" class="tb" title="페이지 번호 넣기"><i data-i="num"></i><span>쪽번호</span></button>
     <button id="bWm" class="tb" title="워터마크 넣기"><i data-i="wm"></i><span>워터마크</span></button>
     <button id="bFit" class="tb" title="페이지 크기 맞추기"><i data-i="size"></i><span>크기</span></button>
+  </div>
+  <div class="igroup">
+    <button id="iAdd" class="tb primary" title="이미지 추가 (Ctrl+O)"><i data-i="open"></i><span>추가</span></button>
+  </div>
+  <div class="igroup">
+    <button id="iUndo" class="tb ic" title="되돌리기 (Ctrl+Z)"><i data-i="undo"></i></button>
+    <button id="iRedo" class="tb ic" title="다시 실행 (Ctrl+Y)"><i data-i="redo"></i></button>
+  </div>
+  <div class="igroup">
+    <button id="iRotL" class="tb" title="왼쪽으로 90° (L)"><i data-i="rotl"></i><span>왼쪽</span></button>
+    <button id="iRotR" class="tb" title="오른쪽으로 90° (R)"><i data-i="rotr"></i><span>오른쪽</span></button>
+    <button id="iFlipH" class="tb ic" title="좌우 뒤집기"><i data-i="fliph"></i></button>
+    <button id="iFlipV" class="tb ic" title="상하 뒤집기"><i data-i="flipv"></i></button>
+    <button id="iDel" class="tb" title="목록에서 빼기 (Delete)"><i data-i="trash"></i><span>빼기</span></button>
+  </div>
+  <div class="igroup">
+    <button id="iEdit" class="tb" title="그림판으로 편집 (Enter)"><i data-i="pen"></i><span>편집</span></button>
+    <button id="iResize" class="tb" title="크기 바꾸기"><i data-i="size"></i><span>크기</span></button>
+    <button id="iJoin" class="tb" title="여러 장을 한 장으로 이어 붙이기"><i data-i="join"></i><span>이어 붙이기</span></button>
+    <button id="iText" class="tb" title="글자·워터마크 넣기"><i data-i="text"></i><span>글자</span></button>
+  </div>
+  <div class="igroup">
+    <button id="iRename" class="tb" title="이름 한꺼번에 바꾸기"><i data-i="rename"></i><span>이름</span></button>
+    <button id="iPdf" class="tb" title="PDF로 만들기 (PDF 편집 탭으로 보냄)"><i data-i="extract"></i><span>PDF로</span></button>
   </div>
   <div class="spacer"></div>
   <div class="group save">
@@ -101,21 +125,69 @@
 
 <main id="imgMain" hidden>
   <aside class="iside">
-    <div class="side-h">이미지 용량 줄이기</div>
+    <div class="side-h">저장 설정</div>
     <div class="ifield"><label>최대 크기 (긴 변)</label><select id="mPx">
       <option value="0">원래 크기 유지</option><option value="3000">3000px (인쇄용)</option><option value="2000" selected>2000px (보통, 추천)</option><option value="1280">1280px (메일·메신저용)</option><option value="800">800px (아주 작게)</option></select></div>
     <div class="ifield"><label>화질 <span id="mQV">75%</span></label><input type="range" id="mQ" min="40" max="95" step="5" value="75"></div>
-    <div class="ifield"><label>저장 형식</label><select id="mFmt"><option value="jpg">JPG (사진, 가장 작음)</option><option value="webp">WebP (더 작지만 일부 프로그램 미지원)</option><option value="keep">원래 형식 유지 (PNG는 크기만 줄임)</option></select></div>
+    <div class="ifield"><label>저장 형식</label><select id="mFmt"><option value="jpg">JPG (사진, 가장 작음)</option><option value="png">PNG (글자·캡처 선명, 투명 유지)</option><option value="webp">WebP (더 작지만 일부 프로그램 미지원)</option><option value="keep">원래 형식 유지</option></select></div>
     <div class="icsum" id="icSum">이미지를 올려줘</div>
-    <button id="icSave" class="tb primary big" disabled><i data-i="save"></i><span>줄여서 저장</span></button>
-    <div class="ibtns"><button id="icAdd" class="tb"><i data-i="open"></i><span>이미지 추가</span></button><button id="icClear" class="tb"><i data-i="trash"></i><span>모두 빼기</span></button></div>
-    <div class="desc">설정을 바꾸면 예상 용량이 바로 바뀌어. 더 안 줄어드는 이미지는 원본 그대로 넣어. 여러 장이면 ZIP 하나로 받아. 원본 파일은 안 바뀌어.</div>
+    <button id="icSave" class="tb primary big" disabled><i data-i="save"></i><span>저장</span></button>
+    <div class="desc">설정을 바꾸면 예상 용량이 바로 바뀌어. 여러 장이면 ZIP 하나로 받아. 원본 파일은 안 바뀌고, 저장한 파일엔 위치정보 같은 사진 정보(EXIF)가 빠져.</div>
   </aside>
   <section id="icWrap">
-    <div id="icEmpty"><div class="drop"><div class="big"><i data-i="image"></i></div><div class="t1">줄일 이미지를 여기로 끌어다 놓기</div><div class="t2">JPG·PNG·WebP 등 여러 장 한 번에</div><button id="icAdd2" class="tb primary">이미지 추가</button></div></div>
+    <div id="isub">
+      <button class="chip" id="iAll">전체 선택</button><button class="chip" id="iNone">선택 해제</button>
+      <span id="iInfo" class="muted"></span><span class="spacer"></span>
+      <span class="muted">더블클릭: 그림판 편집 · 끌어서 순서 바꾸기</span>
+    </div>
+    <div id="icEmpty"><div class="drop"><div class="big"><i data-i="image"></i></div><div class="t1">이미지를 여기로 끌어다 놓기</div><div class="t2">JPG·PNG·WebP·GIF·BMP 여러 장 한 번에</div><button id="icAdd2" class="tb primary">이미지 추가</button></div></div>
     <div id="icList"></div>
   </section>
 </main>
+
+<div id="editor" class="viewer" hidden>
+  <div class="v-bar ebar">
+    <div class="etools" id="eTools">
+      <button class="tb ic" data-tool="pen" title="펜 (P)"><i data-i="pen"></i></button>
+      <button class="tb ic" data-tool="hl" title="형광펜 (H)"><i data-i="hl"></i></button>
+      <button class="tb ic" data-tool="line" title="직선"><i data-i="line"></i></button>
+      <button class="tb ic" data-tool="arrow" title="화살표 (A)"><i data-i="arrow"></i></button>
+      <button class="tb ic" data-tool="rect" title="네모 (B)"><i data-i="rect"></i></button>
+      <button class="tb ic" data-tool="ellipse" title="동그라미 (O)"><i data-i="ellipse"></i></button>
+      <button class="tb ic" data-tool="text" title="글자 (T)"><i data-i="text"></i></button>
+      <button class="tb ic" data-tool="mosaic" title="모자이크 (M)"><i data-i="mosaic"></i></button>
+      <button class="tb ic" data-tool="cover" title="가리기 (칠한 네모)"><i data-i="cover"></i></button>
+      <button class="tb ic" data-tool="eraser" title="지우개: 그린 것만 지워 (E)"><i data-i="eraser"></i></button>
+      <button class="tb ic" data-tool="crop" title="자르기 (C)"><i data-i="crop"></i></button>
+    </div>
+    <span class="sep"></span>
+    <div class="eopts">
+      <span class="swatches" id="eSw"></span>
+      <input type="color" id="eColor" value="#e53935" title="색 고르기">
+      <label class="eo" id="oWidth" title="굵기"><span>굵기</span><input type="range" id="eWidth" min="1" max="40" value="4"><b id="eWidthV">4</b></label>
+      <label class="eo" id="oFont"><span>글자</span><select id="eFont"><option value="16">작게</option><option value="24" selected>보통</option><option value="36">크게</option><option value="56">아주 크게</option></select></label>
+      <label class="eo" id="oFill"><input type="checkbox" id="eFill"> 채우기</label>
+      <label class="eo" id="oRatio"><span>비율</span><select id="eRatio"><option value="0">자유</option><option value="1">1:1</option><option value="1.3333">4:3</option><option value="0.75">3:4</option><option value="1.7778">16:9</option><option value="0.7071">A4 세로</option><option value="1.4142">A4 가로</option></select></label>
+      <button class="tb primary" id="eCropApply" hidden>자르기 적용</button>
+    </div>
+    <span class="spacer"></span>
+    <button class="tb ic" id="eUndo" title="되돌리기 (Ctrl+Z)"><i data-i="undo"></i></button>
+    <button class="tb ic" id="eRedo" title="다시 (Ctrl+Y)"><i data-i="redo"></i></button>
+    <button class="tb ic" id="eRotL" title="왼쪽 회전"><i data-i="rotl"></i></button>
+    <button class="tb ic" id="eRotR" title="오른쪽 회전"><i data-i="rotr"></i></button>
+    <button class="tb ic" id="eFlip" title="좌우 뒤집기"><i data-i="fliph"></i></button>
+    <span class="sep"></span>
+    <button class="tb ic" id="eOut" title="축소"><i data-i="zoomout"></i></button>
+    <span id="eZoom">100%</span>
+    <button class="tb ic" id="eIn" title="확대"><i data-i="zoomin"></i></button>
+    <button class="tb" id="eFit">맞춤</button>
+    <span class="sep"></span>
+    <button class="tb" id="eCancel">취소</button>
+    <button class="tb primary" id="eDone">완료</button>
+  </div>
+  <div class="v-body" id="eBody"><div id="eStage"><canvas id="eCanvas"></canvas><canvas id="eOver"></canvas></div></div>
+  <div class="ehint" id="eHint"></div>
+</div>
 
 <footer id="status"><span id="stTotal"></span><span id="stSel"></span><span class="spacer"></span><span id="stMsg"></span></footer>
 

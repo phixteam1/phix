@@ -166,10 +166,10 @@ async function addSource(name, bytes) {
 }
 
 const collator = new Intl.Collator('ko', { numeric: true, sensitivity: 'base' });
-async function importFiles(fileList, at) {
+async function importFiles(fileList, at, keepOrder) {
   const files = [...fileList].filter((f) => /pdf$/i.test(f.type) || /\.pdf$/i.test(f.name) || /^image\//.test(f.type));
   if (!files.length) { toast('PDF나 이미지 파일만 넣을 수 있어', true); return; }
-  files.sort((a, b) => collator.compare(a.name, b.name));
+  if (!keepOrder) files.sort((a, b) => collator.compare(a.name, b.name));
   const all = [], errs = [];
   for (let i = 0; i < files.length; i++) {
     const f = files[i];
@@ -726,93 +726,6 @@ async function compressAndSave(lv, raster) {
   } catch (e) { console.error(e); unbusy(); toast('용량 줄이기 실패: ' + e.message, true); }
 }
 
-// 이미지 파일 용량 줄이기: 먼저 이미지를 올리고 → 설정 바꾸면 예상 용량이 바로 보이고 → 저장
-S.imgOpts = { px: 2000, q: 0.75, fmt: 'jpg' };
-S.mode = 'pdf';
-const IC = { open: false, items: [], seq: 0, timer: null, run: 0 }; // items: {id,file,url,w,h,res,resKey}
-const optKey = (o) => `${o.px}|${o.q}|${o.fmt}`;
-async function compressOne(f, o) {
-  const bmp = await createImageBitmap(f);
-  const s = o.px ? Math.min(1, o.px / Math.max(bmp.width, bmp.height)) : 1;
-  const w = Math.max(1, Math.round(bmp.width * s)), h = Math.max(1, Math.round(bmp.height * s));
-  const type = o.fmt === 'webp' ? 'image/webp' : o.fmt === 'keep' && /(png|webp)$/i.test(f.type) ? f.type : 'image/jpeg';
-  const c = document.createElement('canvas'); c.width = w; c.height = h; const g = c.getContext('2d');
-  if (type === 'image/jpeg') { g.fillStyle = '#fff'; g.fillRect(0, 0, w, h); }
-  g.imageSmoothingQuality = 'high'; g.drawImage(bmp, 0, 0, w, h); bmp.close();
-  const data = await canvasToBytes(c, type, o.q); c.width = c.height = 0;
-  const ext = { 'image/jpeg': 'jpg', 'image/webp': 'webp', 'image/png': 'png' }[type];
-  if (data.length >= f.size) return { name: f.name, data: null, type: f.type, w: Math.round(w / s), h: Math.round(h / s), same: true };
-  return { name: baseName(f.name) + '_압축.' + ext, data, type, w, h };
-}
-function setMode(m) {
-  S.mode = m; document.body.classList.toggle('mode-img', m === 'img');
-  $$('.modes button').forEach((b) => b.classList.toggle('on', b.dataset.mode === m));
-  $('#main').hidden = m === 'img'; $('#imgMain').hidden = m !== 'img';
-  IC.open = m === 'img'; if (IC.open) { renderIc(); scheduleEstimate(); } else IC.run++;
-  document.title = m === 'img' ? '이미지 줄이기 · PDF 정리함' : 'PDF 정리함';
-}
-function addCompImgs(files) {
-  const all = [...files]; const imgs = all.filter((f) => /^image\//.test(f.type));
-  if (!imgs.length) return toast(all.some((f) => /pdf/i.test(f.type + f.name)) ? 'PDF는 "PDF 편집" 탭에서 열어줘' : '이미지 파일만 넣을 수 있어', true);
-  imgs.sort((a, b) => collator.compare(a.name, b.name));
-  for (const f of imgs) IC.items.push({ id: ++IC.seq, file: f, url: URL.createObjectURL(f), res: null, resKey: '' });
-  renderIc(); scheduleEstimate();
-}
-const esc = (t) => t.replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/"/g, '&quot;');
-function renderIc() {
-  const list = $('#icList');
-  $('#icEmpty').style.display = IC.items.length ? 'none' : '';
-  const key = optKey(S.imgOpts);
-  list.innerHTML = IC.items.map((it) => {
-    const r = it.resKey === key ? it.res : null;
-    const after = r ? (r.err ? '<span class="bad">못 읽음</span>' : r.same ? '<span class="muted">그대로</span>' : `<b>${fmtSize(r.data.length)}</b> <span class="good">-${Math.round((1 - r.data.length / it.file.size) * 100)}%</span>`) : '<span class="muted">계산 중…</span>';
-    const dims = r && !r.err ? `${r.w}×${r.h}` : '';
-    return `<div class="iccard"><div class="ict"><img src="${it.url}" alt="" draggable="false"></div><button type="button" class="x" data-rm="${it.id}" title="빼기">×</button>
-      <div class="nm" title="${esc(it.file.name)}">${esc(it.file.name)}</div><div class="sz">${fmtSize(it.file.size)} → ${after}</div><div class="muted dm">${dims}</div></div>`;
-  }).join('');
-  const done = IC.items.filter((it) => it.resKey === key && it.res && !it.res.err);
-  const pending = IC.items.filter((it) => !(it.resKey === key && it.res));
-  const before = IC.items.reduce((a, it) => a + it.file.size, 0);
-  const after = done.reduce((a, it) => a + (it.res.same ? it.file.size : it.res.data.length), 0);
-  $('#icSum').innerHTML = !IC.items.length ? '이미지를 올려줘' : pending.length
-    ? `${IC.items.length}장 · ${fmtSize(before)}<br><span class="muted">예상 용량 계산 중… (${IC.items.length - pending.length}/${IC.items.length})</span>`
-    : `${IC.items.length}장 · ${fmtSize(before)} → <b>${fmtSize(after)}</b><br><span class="good">${Math.round((1 - after / Math.max(1, before)) * 100)}% 줄어듦</span>`;
-  $('#icSave').disabled = !IC.items.length; $('#icClear').disabled = !IC.items.length;
-}
-function scheduleEstimate() { clearTimeout(IC.timer); renderIc(); IC.timer = setTimeout(estimate, 250); }
-async function estimate() {
-  const run = ++IC.run; const o = { ...S.imgOpts }; const key = optKey(o);
-  for (const it of IC.items) {
-    if (run !== IC.run || !IC.open) return;
-    if (it.resKey === key) continue;
-    try { it.res = await compressOne(it.file, o); } catch (e) { it.res = { err: true }; }
-    if (run !== IC.run) return;
-    it.resKey = key; renderIc();
-  }
-}
-async function saveCompImgs() {
-  if (!IC.items.length) return;
-  const o = { ...S.imgOpts }; const key = optKey(o); IC.run++;
-  busy('이미지 줄이는 중…'); await tick();
-  const out = [];
-  try {
-    for (let i = 0; i < IC.items.length; i++) {
-      const it = IC.items[i]; $('#busyMsg').textContent = `이미지 줄이는 중… (${i + 1}/${IC.items.length})`; await tick();
-      if (it.resKey !== key) { try { it.res = await compressOne(it.file, o); } catch (e) { it.res = { err: true }; } it.resKey = key; }
-      if (it.res.err) continue;
-      const data = it.res.same ? new Uint8Array(await it.file.arrayBuffer()) : it.res.data;
-      const name = it.res.same ? it.file.name : it.res.name;
-      let nm = name, k = 2; while (out.some((x) => x.name === nm)) nm = name.replace(/(\.[^.]+)$/, `(${k++})$1`);
-      out.push({ name: nm, data, type: it.res.type });
-    }
-  } finally { unbusy(); }
-  renderIc();
-  if (!out.length) return toast('이미지를 읽지 못했어', true);
-  if (out.length === 1) download(out[0].data, out[0].name, out[0].type);
-  else download(makeZip(out), baseName(IC.items[0].file.name) + (out.length > 1 ? `_외${out.length - 1}장` : '') + '_압축.zip', 'application/zip');
-  toast(out.length === 1 ? '저장했어 (다운로드 폴더 확인)' : `${out.length}장을 ZIP으로 저장했어 (다운로드 폴더 확인)`);
-}
-
 // ---------- PDF → 이미지 ----------
 function openImg() {
   const n = S.pages.length; if (!n) return; const k = S.sel.size;
@@ -999,7 +912,7 @@ let dragDepth = 0;
 window.addEventListener('dragenter', (e) => { if (hasFiles(e)) { dragDepth++; document.body.classList.add('dragfile'); } });
 window.addEventListener('dragleave', (e) => { if (hasFiles(e) && --dragDepth <= 0) { dragDepth = 0; document.body.classList.remove('dragfile'); } });
 window.addEventListener('dragover', (e) => { if (hasFiles(e)) e.preventDefault(); });
-window.addEventListener('drop', (e) => { e.preventDefault(); dragDepth = 0; document.body.classList.remove('dragfile'); if (!$('#modal').hidden || !$('#viewer').hidden) return; if (S.mode === 'img') { if (e.dataTransfer.files.length) addCompImgs(e.dataTransfer.files); return; } if (!wrap.contains(e.target) && e.dataTransfer.files.length) importFiles(e.dataTransfer.files, null); });
+window.addEventListener('drop', (e) => { e.preventDefault(); dragDepth = 0; document.body.classList.remove('dragfile'); if (!$('#modal').hidden || !$('#viewer').hidden || !$('#editor').hidden) return; if (S.mode === 'img') { if (e.dataTransfer.files.length) imgAddFiles(e.dataTransfer.files); return; } if (!wrap.contains(e.target) && e.dataTransfer.files.length) importFiles(e.dataTransfer.files, null); });
 
 // ---------- 이벤트 연결 ----------
 grid.addEventListener('click', (e) => {
@@ -1029,18 +942,6 @@ $('#bRotL').onclick = () => rotate(-90); $('#bRotR').onclick = () => rotate(90);
 $('#bDel').onclick = () => removePages();
 $('#bExtract').onclick = extractSel; $('#bSplit').onclick = openSplit; $('#bImg').onclick = openImg;
 $('#bComp').onclick = openCompPdf;
-$('.modes').onclick = (e) => { const b = e.target.closest('[data-mode]'); if (b) setMode(b.dataset.mode); };
-const imgOptChanged = () => { S.imgOpts = { px: +$('#mPx').value, q: +$('#mQ').value / 100, fmt: $('#mFmt').value }; $('#mQV').textContent = $('#mQ').value + '%'; scheduleEstimate(); };
-$('#mQ').oninput = imgOptChanged; $('#mPx').onchange = imgOptChanged; $('#mFmt').onchange = imgOptChanged;
-$('#icAdd').onclick = $('#icAdd2').onclick = () => $('#fileImgC').click();
-$('#icSave').onclick = saveCompImgs;
-$('#icClear').onclick = () => { IC.items.forEach((it) => URL.revokeObjectURL(it.url)); IC.items = []; IC.run++; renderIc(); };
-$('#icList').onclick = (e) => {
-  const rm = e.target.closest('[data-rm]'); if (!rm) return;
-  const it = IC.items.find((x) => x.id === +rm.dataset.rm); if (it) URL.revokeObjectURL(it.url);
-  IC.items = IC.items.filter((x) => x !== it); renderIc();
-};
-$('#fileImgC').onchange = (e) => { const f = [...e.target.files]; e.target.value = ''; addCompImgs(f); };
 $('#bNum').onclick = openNum; $('#bWm').onclick = openWm; $('#bFit').onclick = openFit;
 $('#bSave').onclick = saveAll; $('#bTab').onclick = openInTab;
 $('#badges').onclick = (e) => { const b = e.target.closest('[data-b]'); if (!b) return; ({ num: openNum, wm: openWm, fit: openFit })[b.dataset.b](); };
@@ -1094,6 +995,7 @@ document.addEventListener('keydown', (e) => {
   const tag = e.target.tagName; const typing = tag === 'INPUT' || tag === 'SELECT' || tag === 'TEXTAREA';
   const ctrl = e.ctrlKey || e.metaKey; const k = e.key.toLowerCase();
   if (!$('#modal').hidden) { if (e.key === 'Escape') closeDialog(); return; }
+  if (!$('#editor').hidden) { edKey(e, ctrl, k, typing); return; }
   if (!$('#viewer').hidden) {
     if (e.key === 'Escape') closeViewer();
     else if (e.key === 'ArrowLeft' || e.key === 'PageUp') $('#vPrev').click();
@@ -1103,10 +1005,7 @@ document.addEventListener('keydown', (e) => {
     else if (e.key === '0') $('#vFit').click();
     return;
   }
-  if (S.mode === 'img') {
-    if (ctrl && k === 's') { e.preventDefault(); saveCompImgs(); } else if (ctrl && k === 'o') { e.preventDefault(); $('#fileImgC').click(); }
-    return;
-  }
+  if (S.mode === 'img') { imgKey(e, ctrl, k, typing); return; }
   if (ctrl && k === 's') { e.preventDefault(); saveAll(); return; }
   if (ctrl && k === 'o') { e.preventDefault(); $('#fileIn').click(); return; }
   if (typing) return;
@@ -1127,7 +1026,7 @@ document.addEventListener('keydown', (e) => {
     clickSelect(S.pages[ni].uid, { shiftKey: e.shiftKey, ctrlKey: false }); if (!e.shiftKey) S.anchor = S.pages[ni].uid; scrollToUid(S.pages[ni].uid);
   }
 });
-window.addEventListener('beforeunload', (e) => { if (S.dirty && S.pages.length) { e.preventDefault(); e.returnValue = ''; } });
+window.addEventListener('beforeunload', (e) => { if ((S.dirty && S.pages.length) || (window.IC && IC.items.length)) { e.preventDefault(); e.returnValue = ''; } });
 
 render();
 window.__pdfj = { S, importFiles, buildPdf, render }; // 테스트용

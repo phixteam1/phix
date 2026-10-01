@@ -23,7 +23,7 @@ parts = {
     '/*CMAPS*/': json.dumps(cmaps),
     '/*PDFJS*/': safe(rd('vendor', 'pdf.min.js')),
     '/*PDFLIB*/': safe(rd('vendor', 'pdf-lib.min.js')),
-    '/*APP*/': safe(rd('src', 'app.js')),
+    '/*APP*/': safe(rd('src', 'app.js') + '\n' + rd('src', 'imgtab.js')),
 }
 for k, v in parts.items():
     assert html.count(k) == 1, k
