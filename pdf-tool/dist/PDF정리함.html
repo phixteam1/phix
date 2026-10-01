@@ -147,19 +147,38 @@ body.dragfile #gridWrap{outline:3px dashed var(--accent);outline-offset:-8px}
 @media (max-width:1440px){ .group:not(.save) .tb:not(.primary) span{display:none} }
 @media (max-width:900px){ #side{display:none} .tb span{display:none} .tb.primary span{display:inline} #fname{width:130px} }
 
-.dlg.wide{width:min(620px,94vw)}
-.icdrop{border:2px dashed #c3cad6;border-radius:10px;padding:8px;max-height:46vh;overflow:auto;min-height:110px;display:flex;flex-direction:column}
-body.dragfile .icdrop{border-color:var(--accent);background:var(--accent-soft)}
-.icempty{margin:auto;color:var(--sub);display:flex;align-items:center;gap:10px;padding:20px}
-.icrow{display:flex;align-items:center;gap:10px;padding:6px;border-radius:6px}
-.icrow:hover{background:#f4f6f9}
-.icrow img{width:48px;height:48px;object-fit:cover;border-radius:4px;flex:none;background:#eee}
-.icn{flex:1;min-width:0;font-size:12px;line-height:1.6}
-.icn .nm{font-size:13px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;color:var(--text)}
-.icrow .x{border:none;background:none;font-size:18px;color:var(--sub);cursor:pointer;padding:0 6px}
-.icrow .x:hover{color:var(--danger)}
-.icmore{padding:6px}
-.icsum{font-size:14px}
+.modes{display:flex;background:#eef1f6;border-radius:8px;padding:3px;margin-right:8px}
+.modes button{border:none;background:none;padding:5px 12px;border-radius:6px;cursor:pointer;white-space:nowrap;color:var(--sub)}
+.modes button.on{background:#fff;color:var(--accent);font-weight:700;box-shadow:0 1px 3px rgba(0,0,0,.12)}
+body.mode-img #bar .group, body.mode-img #bar .spacer, body.mode-img #sub, body.mode-img #status{display:none}
+#imgMain{flex:1;display:flex;min-height:0}
+#imgMain[hidden],#main[hidden]{display:none}
+.iside{width:260px;flex:none;background:var(--panel);border-right:1px solid var(--line);display:flex;flex-direction:column;gap:14px;padding:0 14px 14px;overflow:auto}
+.iside .side-h{padding:14px 0 0}
+.ifield{display:flex;flex-direction:column;gap:6px}
+.ifield label{color:var(--sub);display:flex;justify-content:space-between}
+.ifield select{height:32px;border:1px solid var(--line);border-radius:6px;padding:0 6px;font:inherit}
+.icsum{font-size:14px;line-height:1.6;padding:10px 12px;background:#f5f7fa;border-radius:8px}
+.tb.big{height:40px;justify-content:center;font-size:14px}
+.ibtns{display:flex;gap:6px}
+.ibtns .tb{flex:1;justify-content:center;border-color:var(--line)}
+.iside .desc{color:var(--sub);font-size:12px;line-height:1.6}
+#icWrap{flex:1;overflow:auto;position:relative}
+#icEmpty{position:absolute;inset:0;display:flex;align-items:center;justify-content:center;padding:30px}
+#icEmpty .drop{text-align:center;border:2px dashed #b7bfcc;border-radius:16px;padding:48px 60px;background:rgba(255,255,255,.6)}
+#icEmpty .big i{width:56px;height:56px;color:#9aa4b5}
+#icEmpty .t1{font-size:17px;font-weight:700;margin:10px 0 4px}
+#icEmpty .t2{color:var(--sub);margin-bottom:18px}
+#icEmpty .tb{height:38px;padding:0 20px;font-size:14px}
+body.dragfile #icWrap{outline:3px dashed var(--accent);outline-offset:-8px}
+#icList{display:grid;grid-template-columns:repeat(auto-fill,minmax(180px,1fr));gap:14px;padding:22px}
+.iccard{background:#fff;border-radius:8px;padding:10px;box-shadow:0 1px 3px rgba(0,0,0,.12);position:relative;font-size:12px;line-height:1.6}
+.ict{height:140px;display:flex;align-items:center;justify-content:center;background:#f3f5f8;border-radius:5px;margin-bottom:6px}
+.ict img{max-width:100%;max-height:100%;object-fit:contain}
+.iccard .nm{font-size:13px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.iccard .x{position:absolute;top:4px;right:4px;width:26px;height:26px;border:none;border-radius:50%;background:rgba(255,255,255,.9);box-shadow:0 1px 3px rgba(0,0,0,.2);font-size:16px;cursor:pointer;color:var(--sub);display:none}
+.iccard:hover .x{display:block}
+.iccard .x:hover{color:var(--danger)}
 .muted{color:var(--sub)} .good{color:#1f8a4c;font-weight:700} .bad{color:var(--danger)}
 
 </style>
@@ -167,6 +186,7 @@ body.dragfile .icdrop{border-color:var(--accent);background:var(--accent-soft)}
 <body>
 <header id="bar">
   <div class="brand">PDF 정리함</div>
+  <div class="modes"><button data-mode="pdf" class="on">PDF 편집</button><button data-mode="img">이미지 줄이기</button></div>
   <div class="group">
     <button id="bOpen" class="tb primary" title="파일 열기 (Ctrl+O)"><i data-i="open"></i><span>열기</span></button>
     <div class="dd">
@@ -192,13 +212,7 @@ body.dragfile .icdrop{border-color:var(--accent);background:var(--accent-soft)}
     <button id="bExtract" class="tb" title="선택 페이지만 새 PDF로 저장"><i data-i="extract"></i><span>추출</span></button>
     <button id="bSplit" class="tb" title="여러 파일로 나누기"><i data-i="split"></i><span>분할</span></button>
     <button id="bImg" class="tb" title="페이지를 JPG·PNG 이미지로 저장"><i data-i="image"></i><span>이미지로</span></button>
-    <div class="dd">
-      <button class="tb" data-dd="ddComp" title="용량 줄이기"><i data-i="compress"></i><span>용량</span><i data-i="caret" class="caret"></i></button>
-      <div class="menu" id="ddComp">
-        <button id="mCompPdf">PDF 용량 줄이기…</button>
-        <button id="mCompImg">이미지 파일 용량 줄이기…</button>
-      </div>
-    </div>
+    <button id="bComp" class="tb" title="PDF 용량 줄이기"><i data-i="compress"></i><span>용량</span></button>
   </div>
   <div class="group">
     <button id="bNum" class="tb" title="페이지 번호 넣기"><i data-i="num"></i><span>쪽번호</span></button>
@@ -256,6 +270,24 @@ body.dragfile .icdrop{border-color:var(--accent);background:var(--accent-soft)}
     </div>
     <div id="grid"></div>
     <div id="marker"></div>
+  </section>
+</main>
+
+<main id="imgMain" hidden>
+  <aside class="iside">
+    <div class="side-h">이미지 용량 줄이기</div>
+    <div class="ifield"><label>최대 크기 (긴 변)</label><select id="mPx">
+      <option value="0">원래 크기 유지</option><option value="3000">3000px (인쇄용)</option><option value="2000" selected>2000px (보통, 추천)</option><option value="1280">1280px (메일·메신저용)</option><option value="800">800px (아주 작게)</option></select></div>
+    <div class="ifield"><label>화질 <span id="mQV">75%</span></label><input type="range" id="mQ" min="40" max="95" step="5" value="75"></div>
+    <div class="ifield"><label>저장 형식</label><select id="mFmt"><option value="jpg">JPG (사진, 가장 작음)</option><option value="webp">WebP (더 작지만 일부 프로그램 미지원)</option><option value="keep">원래 형식 유지 (PNG는 크기만 줄임)</option></select></div>
+    <div class="icsum" id="icSum">이미지를 올려줘</div>
+    <button id="icSave" class="tb primary big" disabled><i data-i="save"></i><span>줄여서 저장</span></button>
+    <div class="ibtns"><button id="icAdd" class="tb"><i data-i="open"></i><span>이미지 추가</span></button><button id="icClear" class="tb"><i data-i="trash"></i><span>모두 빼기</span></button></div>
+    <div class="desc">설정을 바꾸면 예상 용량이 바로 바뀌어. 더 안 줄어드는 이미지는 원본 그대로 넣어. 여러 장이면 ZIP 하나로 받아. 원본 파일은 안 바뀌어.</div>
+  </aside>
+  <section id="icWrap">
+    <div id="icEmpty"><div class="drop"><div class="big"><i data-i="image"></i></div><div class="t1">줄일 이미지를 여기로 끌어다 놓기</div><div class="t2">JPG·PNG·WebP 등 여러 장 한 번에</div><button id="icAdd2" class="tb primary">이미지 추가</button></div></div>
+    <div id="icList"></div>
   </section>
 </main>
 
@@ -902,7 +934,7 @@ function dialog(title, bodyHtml, buttons) {
   $('#modal').hidden = false; paintIcons($('#modal'));
   const f = $('#dlgBody').querySelector('input,select'); f && f.focus();
 }
-function closeDialog() { $('#modal').hidden = true; $('#modal .dlg').classList.remove('wide'); if (IC.open) { IC.open = false; IC.run++; } }
+function closeDialog() { $('#modal').hidden = true; }
 const dv = (id) => $('#dlgBody').querySelector('#' + id);
 
 function openSplit() {
@@ -1083,6 +1115,7 @@ async function compressAndSave(lv, raster) {
 
 // 이미지 파일 용량 줄이기: 먼저 이미지를 올리고 → 설정 바꾸면 예상 용량이 바로 보이고 → 저장
 S.imgOpts = { px: 2000, q: 0.75, fmt: 'jpg' };
+S.mode = 'pdf';
 const IC = { open: false, items: [], seq: 0, timer: null, run: 0 }; // items: {id,file,url,w,h,res,resKey}
 const optKey = (o) => `${o.px}|${o.q}|${o.fmt}`;
 async function compressOne(f, o) {
@@ -1098,55 +1131,40 @@ async function compressOne(f, o) {
   if (data.length >= f.size) return { name: f.name, data: null, type: f.type, w: Math.round(w / s), h: Math.round(h / s), same: true };
   return { name: baseName(f.name) + '_압축.' + ext, data, type, w, h };
 }
-function openCompImg() {
-  const o = S.imgOpts; IC.open = true;
-  dialog('이미지 파일 용량 줄이기', `
-    <div id="icDrop" class="icdrop">
-      <div id="icList"></div>
-      <div class="icempty" id="icEmpty">여기에 이미지를 끌어다 놓거나 <button type="button" class="tb primary" id="icAdd">이미지 추가</button></div>
-    </div>
-    <div class="row"><label>최대 크기</label><select id="mPx">
-      <option value="0">원래 크기 유지</option><option value="3000">3000px (인쇄용)</option><option value="2000">2000px (보통, 추천)</option><option value="1280">1280px (메일·메신저용)</option><option value="800">800px (아주 작게)</option></select></div>
-    <div class="row"><label>화질</label><input type="range" id="mQ" min="40" max="95" step="5" value="${Math.round(o.q * 100)}"><span class="val" id="mQV">${Math.round(o.q * 100)}%</span></div>
-    <div class="row"><label>저장 형식</label><select id="mFmt"><option value="jpg">JPG (사진, 가장 작음)</option><option value="webp">WebP (더 작지만 일부 프로그램 미지원)</option><option value="keep">원래 형식 유지 (PNG는 크기만 줄임)</option></select></div>
-    <div class="icsum" id="icSum"></div>`,
-  [{ label: '닫기' }, { label: '줄여서 저장', primary: true, run: async () => { await saveCompImgs(); return false; } }]);
-  $('#modal .dlg').classList.add('wide');
-  dv('mPx').value = String(o.px); dv('mFmt').value = o.fmt;
-  const changed = () => { S.imgOpts = { px: +dv('mPx').value, q: +dv('mQ').value / 100, fmt: dv('mFmt').value }; scheduleEstimate(); };
-  dv('mQ').oninput = (e) => { dv('mQV').textContent = e.target.value + '%'; changed(); };
-  dv('mPx').onchange = changed; dv('mFmt').onchange = changed;
-  dv('icAdd').onclick = () => $('#fileImgC').click();
-  dv('icList').onclick = (e) => {
-    const rm = e.target.closest('[data-rm]'); if (rm) { const it = IC.items.find((x) => x.id === +rm.dataset.rm); if (it) URL.revokeObjectURL(it.url); IC.items = IC.items.filter((x) => x !== it); renderIc(); scheduleEstimate(); }
-    if (e.target.closest('#icAdd2')) $('#fileImgC').click();
-  };
-  renderIc(); scheduleEstimate();
+function setMode(m) {
+  S.mode = m; document.body.classList.toggle('mode-img', m === 'img');
+  $$('.modes button').forEach((b) => b.classList.toggle('on', b.dataset.mode === m));
+  $('#main').hidden = m === 'img'; $('#imgMain').hidden = m !== 'img';
+  IC.open = m === 'img'; if (IC.open) { renderIc(); scheduleEstimate(); } else IC.run++;
+  document.title = m === 'img' ? '이미지 줄이기 · PDF 정리함' : 'PDF 정리함';
 }
 function addCompImgs(files) {
-  const imgs = [...files].filter((f) => /^image\//.test(f.type));
-  if (!imgs.length) return toast('이미지 파일만 넣을 수 있어', true);
+  const all = [...files]; const imgs = all.filter((f) => /^image\//.test(f.type));
+  if (!imgs.length) return toast(all.some((f) => /pdf/i.test(f.type + f.name)) ? 'PDF는 "PDF 편집" 탭에서 열어줘' : '이미지 파일만 넣을 수 있어', true);
+  imgs.sort((a, b) => collator.compare(a.name, b.name));
   for (const f of imgs) IC.items.push({ id: ++IC.seq, file: f, url: URL.createObjectURL(f), res: null, resKey: '' });
   renderIc(); scheduleEstimate();
 }
+const esc = (t) => t.replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/"/g, '&quot;');
 function renderIc() {
-  if (!IC.open) return;
-  const list = dv('icList'), empty = dv('icEmpty'); if (!list) return;
-  empty.style.display = IC.items.length ? 'none' : '';
+  const list = $('#icList');
+  $('#icEmpty').style.display = IC.items.length ? 'none' : '';
   const key = optKey(S.imgOpts);
   list.innerHTML = IC.items.map((it) => {
     const r = it.resKey === key ? it.res : null;
-    const after = r ? (r.err ? '<span class="bad">못 읽음</span>' : r.same ? `<span class="muted">그대로 (더 안 줄어)</span>` : `<b>${fmtSize(r.data.length)}</b> <span class="good">-${Math.round((1 - r.data.length / it.file.size) * 100)}%</span>`) : '<span class="muted">계산 중…</span>';
+    const after = r ? (r.err ? '<span class="bad">못 읽음</span>' : r.same ? '<span class="muted">그대로</span>' : `<b>${fmtSize(r.data.length)}</b> <span class="good">-${Math.round((1 - r.data.length / it.file.size) * 100)}%</span>`) : '<span class="muted">계산 중…</span>';
     const dims = r && !r.err ? `${r.w}×${r.h}` : '';
-    return `<div class="icrow"><img src="${it.url}" alt=""><div class="icn"><div class="nm" title="${it.file.name.replace(/"/g, '&quot;')}">${it.file.name.replace(/</g, '&lt;')}</div><div class="muted">${fmtSize(it.file.size)} → ${after} <span class="muted">${dims}</span></div></div><button type="button" class="x" data-rm="${it.id}" title="빼기">×</button></div>`;
-  }).join('') + (IC.items.length ? '<div class="icmore"><button type="button" class="chip" id="icAdd2">+ 이미지 더 추가</button></div>' : '');
+    return `<div class="iccard"><div class="ict"><img src="${it.url}" alt="" draggable="false"></div><button type="button" class="x" data-rm="${it.id}" title="빼기">×</button>
+      <div class="nm" title="${esc(it.file.name)}">${esc(it.file.name)}</div><div class="sz">${fmtSize(it.file.size)} → ${after}</div><div class="muted dm">${dims}</div></div>`;
+  }).join('');
   const done = IC.items.filter((it) => it.resKey === key && it.res && !it.res.err);
+  const pending = IC.items.filter((it) => !(it.resKey === key && it.res));
   const before = IC.items.reduce((a, it) => a + it.file.size, 0);
   const after = done.reduce((a, it) => a + (it.res.same ? it.file.size : it.res.data.length), 0);
-  dv('icSum').innerHTML = !IC.items.length ? '' : done.length < IC.items.filter((it) => !(it.resKey === key && it.res?.err)).length
-    ? `${IC.items.length}장 · ${fmtSize(before)} · 예상 용량 계산 중…`
-    : `${IC.items.length}장 · ${fmtSize(before)} → <b>${fmtSize(after)}</b> <span class="good">(${Math.round((1 - after / Math.max(1, before)) * 100)}% 줄어듦)</span>`;
-  $('#dlgFoot .primary').disabled = !IC.items.length;
+  $('#icSum').innerHTML = !IC.items.length ? '이미지를 올려줘' : pending.length
+    ? `${IC.items.length}장 · ${fmtSize(before)}<br><span class="muted">예상 용량 계산 중… (${IC.items.length - pending.length}/${IC.items.length})</span>`
+    : `${IC.items.length}장 · ${fmtSize(before)} → <b>${fmtSize(after)}</b><br><span class="good">${Math.round((1 - after / Math.max(1, before)) * 100)}% 줄어듦</span>`;
+  $('#icSave').disabled = !IC.items.length; $('#icClear').disabled = !IC.items.length;
 }
 function scheduleEstimate() { clearTimeout(IC.timer); renderIc(); IC.timer = setTimeout(estimate, 250); }
 async function estimate() {
@@ -1368,7 +1386,7 @@ let dragDepth = 0;
 window.addEventListener('dragenter', (e) => { if (hasFiles(e)) { dragDepth++; document.body.classList.add('dragfile'); } });
 window.addEventListener('dragleave', (e) => { if (hasFiles(e) && --dragDepth <= 0) { dragDepth = 0; document.body.classList.remove('dragfile'); } });
 window.addEventListener('dragover', (e) => { if (hasFiles(e)) e.preventDefault(); });
-window.addEventListener('drop', (e) => { e.preventDefault(); dragDepth = 0; document.body.classList.remove('dragfile'); if (!$('#modal').hidden) { if (IC.open && e.dataTransfer.files.length) addCompImgs(e.dataTransfer.files); return; } if (!wrap.contains(e.target) && e.dataTransfer.files.length) importFiles(e.dataTransfer.files, null); });
+window.addEventListener('drop', (e) => { e.preventDefault(); dragDepth = 0; document.body.classList.remove('dragfile'); if (!$('#modal').hidden || !$('#viewer').hidden) return; if (S.mode === 'img') { if (e.dataTransfer.files.length) addCompImgs(e.dataTransfer.files); return; } if (!wrap.contains(e.target) && e.dataTransfer.files.length) importFiles(e.dataTransfer.files, null); });
 
 // ---------- 이벤트 연결 ----------
 grid.addEventListener('click', (e) => {
@@ -1397,8 +1415,18 @@ $('#bUndo').onclick = undo; $('#bRedo').onclick = redo;
 $('#bRotL').onclick = () => rotate(-90); $('#bRotR').onclick = () => rotate(90);
 $('#bDel').onclick = () => removePages();
 $('#bExtract').onclick = extractSel; $('#bSplit').onclick = openSplit; $('#bImg').onclick = openImg;
-$('#mCompPdf').onclick = () => { closeMenus(); openCompPdf(); };
-$('#mCompImg').onclick = () => { closeMenus(); openCompImg(); };
+$('#bComp').onclick = openCompPdf;
+$('.modes').onclick = (e) => { const b = e.target.closest('[data-mode]'); if (b) setMode(b.dataset.mode); };
+const imgOptChanged = () => { S.imgOpts = { px: +$('#mPx').value, q: +$('#mQ').value / 100, fmt: $('#mFmt').value }; $('#mQV').textContent = $('#mQ').value + '%'; scheduleEstimate(); };
+$('#mQ').oninput = imgOptChanged; $('#mPx').onchange = imgOptChanged; $('#mFmt').onchange = imgOptChanged;
+$('#icAdd').onclick = $('#icAdd2').onclick = () => $('#fileImgC').click();
+$('#icSave').onclick = saveCompImgs;
+$('#icClear').onclick = () => { IC.items.forEach((it) => URL.revokeObjectURL(it.url)); IC.items = []; IC.run++; renderIc(); };
+$('#icList').onclick = (e) => {
+  const rm = e.target.closest('[data-rm]'); if (!rm) return;
+  const it = IC.items.find((x) => x.id === +rm.dataset.rm); if (it) URL.revokeObjectURL(it.url);
+  IC.items = IC.items.filter((x) => x !== it); renderIc();
+};
 $('#fileImgC').onchange = (e) => { const f = [...e.target.files]; e.target.value = ''; addCompImgs(f); };
 $('#bNum').onclick = openNum; $('#bWm').onclick = openWm; $('#bFit').onclick = openFit;
 $('#bSave').onclick = saveAll; $('#bTab').onclick = openInTab;
@@ -1460,6 +1488,10 @@ document.addEventListener('keydown', (e) => {
     else if (e.key === '+' || e.key === '=') viewerZoom(1.25);
     else if (e.key === '-') viewerZoom(0.8);
     else if (e.key === '0') $('#vFit').click();
+    return;
+  }
+  if (S.mode === 'img') {
+    if (ctrl && k === 's') { e.preventDefault(); saveCompImgs(); } else if (ctrl && k === 'o') { e.preventDefault(); $('#fileImgC').click(); }
     return;
   }
   if (ctrl && k === 's') { e.preventDefault(); saveAll(); return; }

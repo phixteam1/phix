@@ -547,7 +547,7 @@ function dialog(title, bodyHtml, buttons) {
   $('#modal').hidden = false; paintIcons($('#modal'));
   const f = $('#dlgBody').querySelector('input,select'); f && f.focus();
 }
-function closeDialog() { $('#modal').hidden = true; $('#modal .dlg').classList.remove('wide'); if (IC.open) { IC.open = false; IC.run++; } }
+function closeDialog() { $('#modal').hidden = true; }
 const dv = (id) => $('#dlgBody').querySelector('#' + id);
 
 function openSplit() {
@@ -728,6 +728,7 @@ async function compressAndSave(lv, raster) {
 
 // 이미지 파일 용량 줄이기: 먼저 이미지를 올리고 → 설정 바꾸면 예상 용량이 바로 보이고 → 저장
 S.imgOpts = { px: 2000, q: 0.75, fmt: 'jpg' };
+S.mode = 'pdf';
 const IC = { open: false, items: [], seq: 0, timer: null, run: 0 }; // items: {id,file,url,w,h,res,resKey}
 const optKey = (o) => `${o.px}|${o.q}|${o.fmt}`;
 async function compressOne(f, o) {
@@ -743,55 +744,40 @@ async function compressOne(f, o) {
   if (data.length >= f.size) return { name: f.name, data: null, type: f.type, w: Math.round(w / s), h: Math.round(h / s), same: true };
   return { name: baseName(f.name) + '_압축.' + ext, data, type, w, h };
 }
-function openCompImg() {
-  const o = S.imgOpts; IC.open = true;
-  dialog('이미지 파일 용량 줄이기', `
-    <div id="icDrop" class="icdrop">
-      <div id="icList"></div>
-      <div class="icempty" id="icEmpty">여기에 이미지를 끌어다 놓거나 <button type="button" class="tb primary" id="icAdd">이미지 추가</button></div>
-    </div>
-    <div class="row"><label>최대 크기</label><select id="mPx">
-      <option value="0">원래 크기 유지</option><option value="3000">3000px (인쇄용)</option><option value="2000">2000px (보통, 추천)</option><option value="1280">1280px (메일·메신저용)</option><option value="800">800px (아주 작게)</option></select></div>
-    <div class="row"><label>화질</label><input type="range" id="mQ" min="40" max="95" step="5" value="${Math.round(o.q * 100)}"><span class="val" id="mQV">${Math.round(o.q * 100)}%</span></div>
-    <div class="row"><label>저장 형식</label><select id="mFmt"><option value="jpg">JPG (사진, 가장 작음)</option><option value="webp">WebP (더 작지만 일부 프로그램 미지원)</option><option value="keep">원래 형식 유지 (PNG는 크기만 줄임)</option></select></div>
-    <div class="icsum" id="icSum"></div>`,
-  [{ label: '닫기' }, { label: '줄여서 저장', primary: true, run: async () => { await saveCompImgs(); return false; } }]);
-  $('#modal .dlg').classList.add('wide');
-  dv('mPx').value = String(o.px); dv('mFmt').value = o.fmt;
-  const changed = () => { S.imgOpts = { px: +dv('mPx').value, q: +dv('mQ').value / 100, fmt: dv('mFmt').value }; scheduleEstimate(); };
-  dv('mQ').oninput = (e) => { dv('mQV').textContent = e.target.value + '%'; changed(); };
-  dv('mPx').onchange = changed; dv('mFmt').onchange = changed;
-  dv('icAdd').onclick = () => $('#fileImgC').click();
-  dv('icList').onclick = (e) => {
-    const rm = e.target.closest('[data-rm]'); if (rm) { const it = IC.items.find((x) => x.id === +rm.dataset.rm); if (it) URL.revokeObjectURL(it.url); IC.items = IC.items.filter((x) => x !== it); renderIc(); scheduleEstimate(); }
-    if (e.target.closest('#icAdd2')) $('#fileImgC').click();
-  };
-  renderIc(); scheduleEstimate();
+function setMode(m) {
+  S.mode = m; document.body.classList.toggle('mode-img', m === 'img');
+  $$('.modes button').forEach((b) => b.classList.toggle('on', b.dataset.mode === m));
+  $('#main').hidden = m === 'img'; $('#imgMain').hidden = m !== 'img';
+  IC.open = m === 'img'; if (IC.open) { renderIc(); scheduleEstimate(); } else IC.run++;
+  document.title = m === 'img' ? '이미지 줄이기 · PDF 정리함' : 'PDF 정리함';
 }
 function addCompImgs(files) {
-  const imgs = [...files].filter((f) => /^image\//.test(f.type));
-  if (!imgs.length) return toast('이미지 파일만 넣을 수 있어', true);
+  const all = [...files]; const imgs = all.filter((f) => /^image\//.test(f.type));
+  if (!imgs.length) return toast(all.some((f) => /pdf/i.test(f.type + f.name)) ? 'PDF는 "PDF 편집" 탭에서 열어줘' : '이미지 파일만 넣을 수 있어', true);
+  imgs.sort((a, b) => collator.compare(a.name, b.name));
   for (const f of imgs) IC.items.push({ id: ++IC.seq, file: f, url: URL.createObjectURL(f), res: null, resKey: '' });
   renderIc(); scheduleEstimate();
 }
+const esc = (t) => t.replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/"/g, '&quot;');
 function renderIc() {
-  if (!IC.open) return;
-  const list = dv('icList'), empty = dv('icEmpty'); if (!list) return;
-  empty.style.display = IC.items.length ? 'none' : '';
+  const list = $('#icList');
+  $('#icEmpty').style.display = IC.items.length ? 'none' : '';
   const key = optKey(S.imgOpts);
   list.innerHTML = IC.items.map((it) => {
     const r = it.resKey === key ? it.res : null;
-    const after = r ? (r.err ? '<span class="bad">못 읽음</span>' : r.same ? `<span class="muted">그대로 (더 안 줄어)</span>` : `<b>${fmtSize(r.data.length)}</b> <span class="good">-${Math.round((1 - r.data.length / it.file.size) * 100)}%</span>`) : '<span class="muted">계산 중…</span>';
+    const after = r ? (r.err ? '<span class="bad">못 읽음</span>' : r.same ? '<span class="muted">그대로</span>' : `<b>${fmtSize(r.data.length)}</b> <span class="good">-${Math.round((1 - r.data.length / it.file.size) * 100)}%</span>`) : '<span class="muted">계산 중…</span>';
     const dims = r && !r.err ? `${r.w}×${r.h}` : '';
-    return `<div class="icrow"><img src="${it.url}" alt=""><div class="icn"><div class="nm" title="${it.file.name.replace(/"/g, '&quot;')}">${it.file.name.replace(/</g, '&lt;')}</div><div class="muted">${fmtSize(it.file.size)} → ${after} <span class="muted">${dims}</span></div></div><button type="button" class="x" data-rm="${it.id}" title="빼기">×</button></div>`;
-  }).join('') + (IC.items.length ? '<div class="icmore"><button type="button" class="chip" id="icAdd2">+ 이미지 더 추가</button></div>' : '');
+    return `<div class="iccard"><div class="ict"><img src="${it.url}" alt="" draggable="false"></div><button type="button" class="x" data-rm="${it.id}" title="빼기">×</button>
+      <div class="nm" title="${esc(it.file.name)}">${esc(it.file.name)}</div><div class="sz">${fmtSize(it.file.size)} → ${after}</div><div class="muted dm">${dims}</div></div>`;
+  }).join('');
   const done = IC.items.filter((it) => it.resKey === key && it.res && !it.res.err);
+  const pending = IC.items.filter((it) => !(it.resKey === key && it.res));
   const before = IC.items.reduce((a, it) => a + it.file.size, 0);
   const after = done.reduce((a, it) => a + (it.res.same ? it.file.size : it.res.data.length), 0);
-  dv('icSum').innerHTML = !IC.items.length ? '' : done.length < IC.items.filter((it) => !(it.resKey === key && it.res?.err)).length
-    ? `${IC.items.length}장 · ${fmtSize(before)} · 예상 용량 계산 중…`
-    : `${IC.items.length}장 · ${fmtSize(before)} → <b>${fmtSize(after)}</b> <span class="good">(${Math.round((1 - after / Math.max(1, before)) * 100)}% 줄어듦)</span>`;
-  $('#dlgFoot .primary').disabled = !IC.items.length;
+  $('#icSum').innerHTML = !IC.items.length ? '이미지를 올려줘' : pending.length
+    ? `${IC.items.length}장 · ${fmtSize(before)}<br><span class="muted">예상 용량 계산 중… (${IC.items.length - pending.length}/${IC.items.length})</span>`
+    : `${IC.items.length}장 · ${fmtSize(before)} → <b>${fmtSize(after)}</b><br><span class="good">${Math.round((1 - after / Math.max(1, before)) * 100)}% 줄어듦</span>`;
+  $('#icSave').disabled = !IC.items.length; $('#icClear').disabled = !IC.items.length;
 }
 function scheduleEstimate() { clearTimeout(IC.timer); renderIc(); IC.timer = setTimeout(estimate, 250); }
 async function estimate() {
@@ -1013,7 +999,7 @@ let dragDepth = 0;
 window.addEventListener('dragenter', (e) => { if (hasFiles(e)) { dragDepth++; document.body.classList.add('dragfile'); } });
 window.addEventListener('dragleave', (e) => { if (hasFiles(e) && --dragDepth <= 0) { dragDepth = 0; document.body.classList.remove('dragfile'); } });
 window.addEventListener('dragover', (e) => { if (hasFiles(e)) e.preventDefault(); });
-window.addEventListener('drop', (e) => { e.preventDefault(); dragDepth = 0; document.body.classList.remove('dragfile'); if (!$('#modal').hidden) { if (IC.open && e.dataTransfer.files.length) addCompImgs(e.dataTransfer.files); return; } if (!wrap.contains(e.target) && e.dataTransfer.files.length) importFiles(e.dataTransfer.files, null); });
+window.addEventListener('drop', (e) => { e.preventDefault(); dragDepth = 0; document.body.classList.remove('dragfile'); if (!$('#modal').hidden || !$('#viewer').hidden) return; if (S.mode === 'img') { if (e.dataTransfer.files.length) addCompImgs(e.dataTransfer.files); return; } if (!wrap.contains(e.target) && e.dataTransfer.files.length) importFiles(e.dataTransfer.files, null); });
 
 // ---------- 이벤트 연결 ----------
 grid.addEventListener('click', (e) => {
@@ -1042,8 +1028,18 @@ $('#bUndo').onclick = undo; $('#bRedo').onclick = redo;
 $('#bRotL').onclick = () => rotate(-90); $('#bRotR').onclick = () => rotate(90);
 $('#bDel').onclick = () => removePages();
 $('#bExtract').onclick = extractSel; $('#bSplit').onclick = openSplit; $('#bImg').onclick = openImg;
-$('#mCompPdf').onclick = () => { closeMenus(); openCompPdf(); };
-$('#mCompImg').onclick = () => { closeMenus(); openCompImg(); };
+$('#bComp').onclick = openCompPdf;
+$('.modes').onclick = (e) => { const b = e.target.closest('[data-mode]'); if (b) setMode(b.dataset.mode); };
+const imgOptChanged = () => { S.imgOpts = { px: +$('#mPx').value, q: +$('#mQ').value / 100, fmt: $('#mFmt').value }; $('#mQV').textContent = $('#mQ').value + '%'; scheduleEstimate(); };
+$('#mQ').oninput = imgOptChanged; $('#mPx').onchange = imgOptChanged; $('#mFmt').onchange = imgOptChanged;
+$('#icAdd').onclick = $('#icAdd2').onclick = () => $('#fileImgC').click();
+$('#icSave').onclick = saveCompImgs;
+$('#icClear').onclick = () => { IC.items.forEach((it) => URL.revokeObjectURL(it.url)); IC.items = []; IC.run++; renderIc(); };
+$('#icList').onclick = (e) => {
+  const rm = e.target.closest('[data-rm]'); if (!rm) return;
+  const it = IC.items.find((x) => x.id === +rm.dataset.rm); if (it) URL.revokeObjectURL(it.url);
+  IC.items = IC.items.filter((x) => x !== it); renderIc();
+};
 $('#fileImgC').onchange = (e) => { const f = [...e.target.files]; e.target.value = ''; addCompImgs(f); };
 $('#bNum').onclick = openNum; $('#bWm').onclick = openWm; $('#bFit').onclick = openFit;
 $('#bSave').onclick = saveAll; $('#bTab').onclick = openInTab;
@@ -1105,6 +1101,10 @@ document.addEventListener('keydown', (e) => {
     else if (e.key === '+' || e.key === '=') viewerZoom(1.25);
     else if (e.key === '-') viewerZoom(0.8);
     else if (e.key === '0') $('#vFit').click();
+    return;
+  }
+  if (S.mode === 'img') {
+    if (ctrl && k === 's') { e.preventDefault(); saveCompImgs(); } else if (ctrl && k === 'o') { e.preventDefault(); $('#fileImgC').click(); }
     return;
   }
   if (ctrl && k === 's') { e.preventDefault(); saveAll(); return; }
