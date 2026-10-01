@@ -134,5 +134,5 @@ body.dragfile #gridWrap{outline:3px dashed var(--accent);outline-offset:-8px}
 #toast.show{opacity:1}
 #toast.err{background:#b42727}
 
-@media (max-width:1320px){ .group:not(.save) .tb:not(.primary) span{display:none} }
+@media (max-width:1440px){ .group:not(.save) .tb:not(.primary) span{display:none} }
 @media (max-width:900px){ #side{display:none} .tb span{display:none} .tb.primary span{display:inline} #fname{width:130px} }

@@ -31,6 +31,7 @@ const ICONS = {
   rotl: '<path d="M4 4v6h6"/><path d="M4.5 10A8 8 0 1 1 6 16.5"/>',
   rotr: '<path d="M20 4v6h-6"/><path d="M19.5 10A8 8 0 1 0 18 16.5"/>',
   trash: '<path d="M4 7h16M10 11v6M14 11v6M6 7l1 13h10l1-13M9 7V4h6v3"/>',
+  image: '<rect x="3" y="4" width="18" height="16" rx="2"/><circle cx="9" cy="10" r="2"/><path d="M21 17l-5-5-8 8"/>',
   extract: '<rect x="3" y="4" width="11" height="15" rx="1.5"/><path d="M12 12h9M18 9l3 3-3 3"/>',
   split: '<rect x="3" y="4" width="7" height="16" rx="1"/><rect x="14" y="4" width="7" height="16" rx="1"/>',
   num: '<rect x="5" y="3" width="14" height="18" rx="1.5"/><path d="M10 17h4M12 17v-4"/>',
@@ -93,7 +94,7 @@ async function saveFile(name, type, make) {
   if (window.showSaveFilePicker && S.askWhere) {
     try {
       const ext = name.slice(name.lastIndexOf('.'));
-      h = await window.showSaveFilePicker({ suggestedName: name, types: [{ description: ext === '.zip' ? 'ZIP 파일' : 'PDF 파일', accept: { [type]: [ext] } }] });
+      h = await window.showSaveFilePicker({ suggestedName: name, types: [{ description: ext === '.zip' ? 'ZIP 파일' : ext === '.pdf' ? 'PDF 파일' : '이미지 파일', accept: { [type]: [ext] } }] });
     } catch (e) { if (e.name === 'AbortError') return null; console.warn('picker', e); }
   }
   const bytes = await make();
@@ -324,7 +325,7 @@ function updateUI() {
   $$('.card').forEach((c) => c.classList.toggle('sel', S.sel.has(c.dataset.uid)));
   const none = !n, nosel = !k;
   ['#bRotL', '#bRotR', '#bDel', '#bExtract', '#mInsDup'].forEach((s) => ($(s).disabled = nosel));
-  ['#bSave', '#bTab', '#bSplit'].forEach((s) => ($(s).disabled = none));
+  ['#bSave', '#bTab', '#bSplit', '#bImg'].forEach((s) => ($(s).disabled = none));
   $('#bUndo').disabled = !S.undo.length; $('#bRedo').disabled = !S.redo.length;
   $('#bNum').classList.toggle('on', S.settings.num.on);
   $('#bWm').classList.toggle('on', S.settings.wm.on);
@@ -598,6 +599,60 @@ async function doSplit(groups, outMode, mode) {
     }
   } catch (e) { console.error(e); unbusy(); toast('분할 실패: ' + e.message, true); }
 }
+// ---------- PDF → 이미지 ----------
+function openImg() {
+  const n = S.pages.length; if (!n) return; const k = S.sel.size;
+  dialog('이미지로 저장 (JPG·PNG)', `
+    <div class="radio">
+      <label><input type="radio" name="ir" value="sel" ${k ? 'checked' : 'disabled'}> 선택한 페이지 (${k}쪽)</label>
+      <label><input type="radio" name="ir" value="all" ${k ? '' : 'checked'}> 전체 페이지 (${n}쪽)</label>
+    </div>
+    <div class="row"><label>형식</label><select id="iFmt"><option value="jpg">JPG (용량 작음)</option><option value="png">PNG (글자 선명, 용량 큼)</option></select></div>
+    <div class="row"><label>화질</label><select id="iDpi"><option value="96">보통 (화면용, 96dpi)</option><option value="150" selected>좋음 (150dpi)</option><option value="300">인쇄용 (300dpi)</option></select></div>
+    <div class="desc">회전·쪽번호·워터마크도 그대로 들어가. 여러 장이면 ZIP 하나로 받아.</div>`,
+  [{ label: '취소' }, { label: '이미지 저장', primary: true, run: async () => {
+    const all = $('#dlgBody').querySelector('input[name=ir]:checked').value === 'all';
+    const idx = all ? S.pages.map((_, i) => i) : selectedIdx();
+    const fmt = dv('iFmt').value, dpi = +dv('iDpi').value;
+    closeDialog(); await exportImages(idx, fmt, dpi);
+  } }]);
+}
+async function exportImages(idx, fmt, dpi) {
+  const base = safeName($('#fname').value || '문서'); const ext = fmt === 'png' ? 'png' : 'jpg';
+  const mime = fmt === 'png' ? 'image/png' : 'image/jpeg';
+  const make = async () => {
+    busy('이미지 만드는 중…'); await tick();
+    try {
+      const bytes = await buildPdf(idx.map((i) => S.pages[i])); // 설정(회전·쪽번호·워터마크·크기) 반영된 PDF를 그대로 그림
+      const doc = await pdfjsLib.getDocument({ data: bytes, CMapReaderFactory: EmbeddedCMapReader, isEvalSupported: false, ...(PDF_WORKER ? { worker: PDF_WORKER } : {}) }).promise;
+      const files = [];
+      for (let k = 0; k < doc.numPages; k++) {
+        $('#busyMsg').textContent = `이미지 만드는 중… (${k + 1}/${doc.numPages})`; await tick();
+        const page = await doc.getPage(k + 1);
+        let scale = dpi / 72; const v0 = page.getViewport({ scale });
+        const maxPx = 12000; if (Math.max(v0.width, v0.height) > maxPx) scale *= maxPx / Math.max(v0.width, v0.height);
+        const vp = page.getViewport({ scale });
+        const c = document.createElement('canvas'); c.width = Math.round(vp.width); c.height = Math.round(vp.height);
+        const g = c.getContext('2d'); g.fillStyle = '#fff'; g.fillRect(0, 0, c.width, c.height);
+        await page.render({ canvasContext: g, viewport: vp }).promise; page.cleanup();
+        const blob = await new Promise((r) => c.toBlob(r, mime, 0.92)); c.width = c.height = 0;
+        files.push({ name: `${base}_${idx[k] + 1}.${ext}`, data: new Uint8Array(await blob.arrayBuffer()) });
+      }
+      doc.destroy();
+      return files;
+    } finally { unbusy(); }
+  };
+  try {
+    if (idx.length === 1) {
+      const r = await saveFile(`${base}_${idx[0] + 1}.${ext}`, mime, async () => (await make())[0].data);
+      if (r) toast('이미지로 저장했어');
+    } else {
+      const r = await saveFile(`${base}_이미지.zip`, 'application/zip', async () => makeZip(await make()));
+      if (r) toast(`${idx.length}장 이미지로 저장했어 (ZIP)`);
+    }
+  } catch (e) { console.error(e); unbusy(); toast('이미지 저장 실패: ' + e.message, true); }
+}
+
 function posPicker(cur) {
   const P = [['tl', '왼쪽 위'], ['tc', '가운데 위'], ['tr', '오른쪽 위'], ['bl', '왼쪽 아래'], ['bc', '가운데 아래'], ['br', '오른쪽 아래']];
   return `<div class="poss" id="numPos">${P.map(([k, t]) => `<button type="button" data-pos="${k}" class="${k === cur ? 'on' : ''}">${t}</button>`).join('')}</div>`;
@@ -758,7 +813,7 @@ $('#mInsDup').onclick = () => { closeMenus(); duplicate(); };
 $('#bUndo').onclick = undo; $('#bRedo').onclick = redo;
 $('#bRotL').onclick = () => rotate(-90); $('#bRotR').onclick = () => rotate(90);
 $('#bDel').onclick = () => removePages();
-$('#bExtract').onclick = extractSel; $('#bSplit').onclick = openSplit;
+$('#bExtract').onclick = extractSel; $('#bSplit').onclick = openSplit; $('#bImg').onclick = openImg;
 $('#bNum').onclick = openNum; $('#bWm').onclick = openWm; $('#bFit').onclick = openFit;
 $('#bSave').onclick = saveAll; $('#bTab').onclick = openInTab;
 $('#badges').onclick = (e) => { const b = e.target.closest('[data-b]'); if (!b) return; ({ num: openNum, wm: openWm, fit: openFit })[b.dataset.b](); };
