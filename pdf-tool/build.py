@@ -12,6 +12,11 @@ for f in sorted(os.listdir(cdir)):
     if f.endswith('.bcmap'):
         cmaps[f[:-6]] = base64.b64encode(open(os.path.join(cdir, f), 'rb').read()).decode()
 html = rd('src', 'index.html')
+b64 = lambda n: base64.b64encode(open(os.path.join(H, 'assets', n), 'rb').read()).decode()
+icons = ('<link rel="icon" type="image/png" sizes="32x32" href="data:image/png;base64,%s">\n'
+         '<link rel="icon" type="image/svg+xml" href="data:image/svg+xml;base64,%s">\n'
+         '<link rel="apple-touch-icon" href="data:image/png;base64,%s">') % (b64('icon32.png'), b64('icon.svg'), b64('icon180.png'))
+html = html.replace('<!--ICON-->', icons)
 parts = {
     '/*CSS*/': rd('src', 'style.css'),
     '/*PDFJS_WORKER*/': safe(rd('vendor', 'pdf.worker.min.js')),
