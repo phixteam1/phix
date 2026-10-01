@@ -136,3 +136,18 @@ body.dragfile #gridWrap{outline:3px dashed var(--accent);outline-offset:-8px}
 
 @media (max-width:1440px){ .group:not(.save) .tb:not(.primary) span{display:none} }
 @media (max-width:900px){ #side{display:none} .tb span{display:none} .tb.primary span{display:inline} #fname{width:130px} }
+
+.dlg.wide{width:min(620px,94vw)}
+.icdrop{border:2px dashed #c3cad6;border-radius:10px;padding:8px;max-height:46vh;overflow:auto;min-height:110px;display:flex;flex-direction:column}
+body.dragfile .icdrop{border-color:var(--accent);background:var(--accent-soft)}
+.icempty{margin:auto;color:var(--sub);display:flex;align-items:center;gap:10px;padding:20px}
+.icrow{display:flex;align-items:center;gap:10px;padding:6px;border-radius:6px}
+.icrow:hover{background:#f4f6f9}
+.icrow img{width:48px;height:48px;object-fit:cover;border-radius:4px;flex:none;background:#eee}
+.icn{flex:1;min-width:0;font-size:12px;line-height:1.6}
+.icn .nm{font-size:13px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;color:var(--text)}
+.icrow .x{border:none;background:none;font-size:18px;color:var(--sub);cursor:pointer;padding:0 6px}
+.icrow .x:hover{color:var(--danger)}
+.icmore{padding:6px}
+.icsum{font-size:14px}
+.muted{color:var(--sub)} .good{color:#1f8a4c;font-weight:700} .bad{color:var(--danger)}
